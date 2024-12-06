@@ -1,0 +1,12 @@
+{
+	"compilerOptions": {
+		
+		//"noLib": true,
+			
+		//"lib": ["ESNext"]
+		//"target": "ES2024",
+		"lib": [],
+		"typeRoots": ["."],
+		"types": ["core.d.ts"]
+	},
+}
