@@ -28,6 +28,6 @@ jobs:
         uses: mooyoul/tslint-actions@v1.1.4
         with:
           project: ./tests/tsconfig.json
-            
+          token: ${{ secrets.GITHUB_TOKEN }}
         
             
