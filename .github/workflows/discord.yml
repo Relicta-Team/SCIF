@@ -11,9 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Notify Discord
-        uses: discord-actions/message@v2
+        uses: cl8dep/action-discord@v0
         with:
-          webhookUrl: ${{ secrets.DISCORD_TOKEN }}
+          webhook: ${{ secrets.DISCORD_TOKEN }}
           message: ${{ github.event.commits[0].message }}
           username: ${{ github.event.commits[0].author.name }}
           avatar: ${{ github.event.commits[0].author.avatar_url }}
