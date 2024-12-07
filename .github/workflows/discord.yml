@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: test avatar url
-        run: echo "https://github.com/${{ github.event.commits[0].author.login }}.png"
+        run: echo "https://github.com/${{ github.actor }}.png"
       - name: Notify Discord
         uses: cl8dep/action-discord@0.1
         with:
           webhook: ${{ secrets.DISCORD_TOKEN }}
-          message: "${{ github.event.commits[0].message }}\nCommit: [${{ github.sha }}](<${{ github.event.commits[0].url }}>)"
+          message: "${{ github.event.commits[0].message }}\n> Commit on ${{ github.repository }}: [${{ github.sha }}](<${{ github.event.commits[0].url }}>)"
           username: ${{ github.event.commits[0].author.name }}
-          avatar: "https://github.com/${{ github.event.commits[0].author.login }}.png"
+          avatar: "https://github.com/${{ github.actor }}.png"
