@@ -16,6 +16,6 @@ jobs:
         uses: cl8dep/action-discord@0.1
         with:
           webhook: ${{ secrets.DISCORD_TOKEN }}
-          message: "${{ github.event.commits[0].message }}\nCommit: [${{github.event.commits[0].sha}}](<${{ github.event.commits[0].url }}>)"
+          message: "${{ github.event.commits[0].message }}\nCommit: [${{ github.sha }}](<${{ github.event.commits[0].url }}>)"
           username: ${{ github.event.commits[0].author.name }}
-          avatar_url: "https://github.com/${{ github.event.commits[0].author.login }}.png"
+          avatar: "https://github.com/${{ github.event.commits[0].author.login }}.png"
