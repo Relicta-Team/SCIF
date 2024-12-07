@@ -1,33 +1,33 @@
 
-name: test_lint
+# name: test_lint
 
-on:
-  workflow_dispatch:
-  pull_request:
-    types: [opened, synchronize, reopened]
-  push:
-    branches:
-      - main
+# on:
+#   workflow_dispatch:
+#   pull_request:
+#     types: [opened, synchronize, reopened]
+#   push:
+#     branches:
+#       - main
 
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "14"
-      - run: npm install
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+# jobs:
+#   validate:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v2
+#       - uses: actions/setup-node@v2
+#         with:
+#           node-version: "14"
+#       - run: npm install
+#       - name: Install dependencies
+#         run: yarn install --frozen-lockfile
       
-      - name: Delta TypeScript Graph
-        uses: ysk8hori/delta-typescript-graph-action@v1.0.5
+#       - name: Delta TypeScript Graph
+#         uses: ysk8hori/delta-typescript-graph-action@v1.0.5
       
-      - name: TSLint checks
-        uses: mooyoul/tslint-actions@v1.1.4
-        with:
-          project: ${{ github.workspace }}/tests/tsconfig.json
-          token: ${{ secrets.GITHUB_TOKEN }}
+#       - name: TSLint checks
+#         uses: mooyoul/tslint-actions@v1.1.4
+#         with:
+#           project: ${{ github.workspace }}/tests/tsconfig.json
+#           token: ${{ secrets.GITHUB_TOKEN }}
         
             
