@@ -23,5 +23,5 @@ jobs:
       - name: TypeScript report
         uses: Gozala/typescript-error-reporter-action@v1.0.9
         with:
-          project: tests/tsconfig.json
+          project: ${{ github.workspace }}/tests/tsconfig.json
             
