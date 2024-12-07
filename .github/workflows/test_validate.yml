@@ -29,7 +29,5 @@ jobs:
       - name: Linter action
         id: linter
         uses: AntonKornus/TypeScript-Linter@1.0.0
-        with:
-          folder: ./tests
         
             
