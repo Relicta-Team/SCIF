@@ -26,6 +26,8 @@ jobs:
       
       - name: TSLint checks
         uses: mooyoul/tslint-actions@v1.1.4
+        with:
+          project: ./tests/tsconfig.json
             
         
             
