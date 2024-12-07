@@ -10,6 +10,8 @@ jobs:
     name: Notify
     runs-on: ubuntu-latest
     steps:
+      - name: test avatar url
+        run: echo ${{ github.event.commits[0].author.avatar_url }}
       - name: Notify Discord
         uses: cl8dep/action-discord@0.1
         with:
