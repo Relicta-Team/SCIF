@@ -23,8 +23,13 @@ jobs:
       
       - name: Delta TypeScript Graph
         uses: ysk8hori/delta-typescript-graph-action@v1.0.5
+        with:
+          tsconfig-root: ./tests/tsconfig.json
       
-      - name: Typecheck
-        uses: andoshin11/typescript-error-reporter-action@v1.0.2
+      - name: Linter action
+        id: linter
+        uses: AntonKornus/TypeScript-Linter@1.0.0
+        with:
+          folder: ./tests
         
             
