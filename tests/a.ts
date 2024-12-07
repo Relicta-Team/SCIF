@@ -19,8 +19,12 @@ var cls = new NonClass()
 
 int.dataGet()
 
+//not exist tests
+var obj = new MediaStream()
+obj.getTracks()
+var telem = document.getElementById("id")
 
-
+int.components = 5;
 
 var v = new B()
 v.method_b()
