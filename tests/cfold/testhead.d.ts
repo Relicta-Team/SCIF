@@ -1,9 +1,9 @@
 
 
-declare var NonClass: ObjectConstructor;
+declare var NonClass: _octor;
 
 
-interface ObjectConstructor {
+interface _octor {
     new (value?: any): NonClass;
     (): any;
     (value: any): any;
