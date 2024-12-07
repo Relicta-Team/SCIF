@@ -24,7 +24,8 @@ jobs:
       - name: Delta TypeScript Graph
         uses: ysk8hori/delta-typescript-graph-action@v1.0.5
       
-      - name: Typecheck
-        uses: andoshin11/typescript-error-reporter-action@v1.0.2
+      - name: TSLint checks
+        uses: mooyoul/tslint-actions@v1.1.4
+            
         
             
