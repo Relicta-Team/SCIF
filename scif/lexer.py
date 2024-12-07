@@ -1,7 +1,14 @@
 import ply.lex as lex
 
+"""
+	For example tokenize see:
+		https://github.com/eliben/pycparser/blob/main/pycparser/c_lexer.py
+		https://github.com/Prabhat-Deshmukh022/Typescript_lexer_parser/blob/main/Yacc_Code.py
+
+
+"""
+
 tokens = (
-	'VAR_DEF',
 	'IDENT',
 	'ASSIGN',
 	'NUMBER',

@@ -1,0 +1,9 @@
+
+
+statement -> [directive | expression ]
+directive -> [macros_mgmt | include | conditional ]
+macros_mgmt -> [ define | undef ]
+include -> INCLUDE [< STRING > | " STRING " ]
+conditional -> [ PP_IFDEF statement PP_ENDIF | IFDEF statement PP_ELSE statement | PP_ENDIF ]
+PP_IFDEF -> [ PP_IFDEF_REAL indent | PP_IF_REAL ident ]
+...todo

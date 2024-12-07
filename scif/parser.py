@@ -6,7 +6,7 @@ def p_program(p):
 			   | VAR_DEF IDENT ASSIGN NUMBER SEMICOLON program
 	'''
 	#p[0] = p[2]
-	print(f'{p[1]} {p[2]} = {p[4]}')
+	#print(f'{p[1]} {p[2]} = {p[4]}')
 	#todo tokenize
 
 def p_error(p):
