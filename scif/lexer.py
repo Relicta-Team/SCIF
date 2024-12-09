@@ -22,7 +22,7 @@ reserved = {
 }
 
 conditions_symbols = (
-    'LT','GT','LTE','GTE','EQUALV','EQUALVT','NOTEQUALV','NOTEQUALVT','OR','AND'
+	'LT','GT','LTE','GTE','EQUALV','EQUALVT','NOTEQUALV','NOTEQUALVT','OR','AND'
 )
 
 t_LT = r'<'
@@ -66,7 +66,7 @@ tokens = (
 literals = '();={}:!,[]'
 
 states = (
-    ('string', 'inclusive'),
+	('string', 'inclusive'),
 )
 
 t_ignore = ' \t\r'
@@ -101,29 +101,26 @@ def t_NUMBER(t):
 
 def t_STRING(t):
 	r'[\"\']'
-	t.lexer.begin('string')
-	t.lexer.str_start = t.lexer.lexpos
-	t.lexer.str_marker = t.value
+	t.lexer.push_state('string')
+	t.lexer.string_start = t.lexpos
 
 def t_string_chars(t):
-    r'[^"\'\n]+'
+	r'[^"\'\n]+'
 
 def t_string_end(t):
-    r'[\"\']'
-
-    if t.lexer.str_marker == t.value:
-        t.type = 'STRING'
-        t.value = t.lexer.lexdata[t.lexer.str_start:t.lexer.lexpos - 1]
-        t.lexer.begin('INITIAL')
-        return t
+	r'[\"\']'
+	t.lexer.pop_state()
+	t.type = 'STRING'
+	t.value = t.lexer.lexdata[t.lexer.string_start+1:t.lexpos]
+	return t
 
 def t_error(t):
 	print("Illegal character '%s'" % t.value[0])
 	t.lexer.skip(1)
 
 def t_newline(t):
-    r'\n+'
-    t.lexer.lineno += len(t.value)
+	r'\n+'
+	t.lexer.lineno += len(t.value)
 
 lexer = lex.lex(reflags=lex.re.UNICODE | lex.re.DOTALL)
 
