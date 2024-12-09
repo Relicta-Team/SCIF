@@ -1,9 +1,17 @@
 
 
-statement -> [directive | expression ]
+statement -> [directive | expression | assign ]
 directive -> [macros_mgmt | include | conditional ]
 macros_mgmt -> [ define | undef ]
-include -> INCLUDE [< STRING > | " STRING " ]
-conditional -> [ PP_IFDEF statement PP_ENDIF | IFDEF statement PP_ELSE statement | PP_ENDIF ]
-PP_IFDEF -> [ PP_IFDEF_REAL indent | PP_IF_REAL ident ]
-...todo
+include -> INCLUDE [< string > | " string " ]
+conditional -> [ PP_IFDEF statement PP_ENDIF | IFDEF statement PP_ELSE statement PP_ENDIF ]
+compare_op -> [ = | != | < | > | <= | >= ]
+PP_IFDEF -> [ PP_IFDEF_REAL indent | PP_IF_REAL PP_IF_CONDITION ]
+PP_IF_CONDITION -> [ PP_IF_STATE compare_op PP_IF_STATE ]
+PP_IF_STATE -> [ ident | number ]
+nular_op -> [ ANY_CMD_NULAR ]
+unary_op -> [ ANY_CMD_UNARY expression ]
+binary_op -> [ expression ANY_CMD_BINARY expression ]
+literal -> [ ident | number | string | nular_op | CODE ]
+assign -> [ ident = expression ]
+expression -> [ literal | ]

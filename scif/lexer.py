@@ -8,34 +8,114 @@ import ply.lex as lex
 
 """
 
+reserved = {
+	'if': 'IF',
+	'else': 'ELSE',
+	'then': 'THEN',
+	'exitwith': 'EXITWITH',
+	'while': 'WHILE',
+	'do': 'DO',
+	'for': 'FOR',
+	'in': 'IN',
+	'break': 'BREAK',
+	'continue': 'CONTINUE',
+}
+
+conditions_symbols = (
+    'LT','GT','LTE','GTE','EQUALV','EQUALVT','NOTEQUALV','NOTEQUALVT','OR','AND'
+)
+
+t_LT = r'<'
+t_GT = r'>'
+t_LTE = r'<='
+t_GTE = r'>='
+t_EQUALV = r'==' 
+t_NOTEQUALV = r'!='
+t_AND=r'&&'
+t_OR=r'\|\|'
+
 tokens = (
+	#preprocessor
+	'PP_COMMENT_LINE',
+	'PP_COMMENT_BLOCK',
+	'PP_DIRECTIVE',
+	'PP_IF',
+	'PP_ELSE',
+	'PP_ENDIF'
+
+	#regular
 	'IDENT',
-	'ASSIGN',
 	'NUMBER',
+	'STRING'
+	'NULAR_OP',
+	'UNARY_OP',
+	'BINARY_OP',
+	
+	'ASSIGN',
 	'SEMICOLON',
-	)
+	'OPEN_PAREN',
+	'CLOSE_PAREN',
+	'OPEN_BRACKET',
+	'CLOSE_BRACKET',
+	'OPEN_BRACE',
+	'CLOSE_BRACE',
+	
+	) + tuple(reserved.values()) + conditions_symbols
+
+
+literals = '();={}:!,[]'
+
+states = (
+    ('string', 'inclusive'),
+)
 
 t_ignore = ' \t\r'
+t_PP_COMMENT_LINE = r'//.*'
+t_PP_COMMENT_BLOCK = r'/\*.*\*/'
 
-def t_VAR_DEF(t):
-	r'var'
+def t_PP_DIRECTIVE(t):
+	r'\#(include|define|undef)'
+	t.type = t.value.upper()
 	return t
+
+
+
+t_ASSIGN = r'='
+t_SEMICOLON = r';'
+t_OPEN_PAREN = r'\('
+t_CLOSE_PAREN = r'\)'
+t_OPEN_BRACKET = r'\['
+t_CLOSE_BRACKET = r'\]'
+t_OPEN_BRACE = r'\{'
+t_CLOSE_BRACE = r'\}'
 
 def t_IDENT(t):
 	r'[a-zA-Z_][a-zA-Z0-9_]*'
-	return t
-
-def t_ASSIGN(t):
-	r'='
+	t.type = reserved.get(t.value, 'IDENT')
 	return t
 
 def t_NUMBER(t):
-	r'\d+'
+	r'(((\$|0x)[0-9a-fA-F]+)|(\.[0-9]+))|(\b[0-9]+(\.[0-9]+|[eE][-+]?[0-9]+)?)\b'
+	#t.value = float(t.value)
 	return t
 
-def t_SEMICOLON(t):
-	r';'
-	return t
+def t_STRING(t):
+	r'[\"\']'
+	t.lexer.begin('string')
+	t.lexer.str_start = t.lexer.lexpos
+	t.lexer.str_marker = t.value
+
+def t_string_chars(t):
+    r'[^"\'\n]+'
+
+def t_string_end(t):
+    r'[\"\']'
+
+    if t.lexer.str_marker == t.value:
+        t.type = 'STRING'
+        t.value = t.lexer.lexdata[t.lexer.str_start:t.lexer.lexpos - 1]
+        t.lexer.begin('INITIAL')
+        return t
 
 def t_error(t):
 	print("Illegal character '%s'" % t.value[0])
@@ -48,7 +128,8 @@ def t_newline(t):
 lexer = lex.lex(reflags=lex.re.UNICODE | lex.re.DOTALL)
 
 if __name__ == '__main__':
-	with open('input.txt') as f:
+	import os
+	with open(os.path.dirname(__file__) + '\\input.txt') as f:
 		input = f.read()
 	lexer.input(input)
 
