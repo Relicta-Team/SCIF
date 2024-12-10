@@ -41,7 +41,7 @@ tokens = (
 	'PP_DIRECTIVE',
 	'PP_IF',
 	'PP_ELSE',
-	'PP_ENDIF'
+	'PP_ENDIF',
 
 	#regular
 	'IDENT',
