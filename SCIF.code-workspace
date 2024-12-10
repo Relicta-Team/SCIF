@@ -4,5 +4,29 @@
 			"path": "."
 		}
 	],
-	"settings": {}
+	"settings": {
+		
+
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "lex debug",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${workspaceFolder}/SCIF/lexer.py",
+				"cwd": "${workspaceFolder}/SCIF",
+				"console": "integratedTerminal",
+			},
+			{
+				"name": "parse debug",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${workspaceFolder}/SCIF/parser.py",
+				"cwd": "${workspaceFolder}/SCIF",
+				"console": "integratedTerminal",
+			}
+		]
+	}
 }

@@ -46,12 +46,13 @@ tokens = (
 	#regular
 	'IDENT',
 	'NUMBER',
-	'STRING'
+	'STRING',
+	"BOOLEAN",
 	'NULAR_OP',
 	'UNARY_OP',
 	'BINARY_OP',
 	
-	'ASSIGN',
+	#'ASSIGN',
 	'SEMICOLON',
 	'OPEN_PAREN',
 	'CLOSE_PAREN',
@@ -80,7 +81,7 @@ def t_PP_DIRECTIVE(t):
 
 
 
-t_ASSIGN = r'='
+# t_ASSIGN = r'='
 t_SEMICOLON = r';'
 t_OPEN_PAREN = r'\('
 t_CLOSE_PAREN = r'\)'
@@ -88,6 +89,10 @@ t_OPEN_BRACKET = r'\['
 t_CLOSE_BRACKET = r'\]'
 t_OPEN_BRACE = r'\{'
 t_CLOSE_BRACE = r'\}'
+
+def t_BOOLEAN(t):
+	r'(true|false)'
+	return t
 
 def t_IDENT(t):
 	r'[a-zA-Z_][a-zA-Z0-9_]*'
