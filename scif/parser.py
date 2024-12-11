@@ -1,15 +1,37 @@
 from lexer import lexer,tokens
 import ply.yacc as yacc
 
+# https://community.bistudio.com/wiki/Operators
+
+
 from ast_lang import *
 
-start = 'statement'
+start = 'prog'
+
+def p_prog(p):
+	'''prog : statements
+	'''
+	p[0] = p[1]
 
 def p_statement(p):
+	# todo add control_structures, code_block, use '(', ')' for condition
 	'''statement : assignment
 				 | expression
 	'''
 	p[0] = p[1]
+
+def p_statements(p):
+	'''statements : statement
+				  | statement SEMICOLON statements
+				  | empty
+	'''
+	if len(p) > 2:
+		p[0] = [p[1]] + p[3] if p[3]!= None else []
+		pass
+	else:
+		if p[1] != None:
+			p[0] = p[1]
+	
 
 def p_expression(p):
 	'''expression : literal
@@ -28,10 +50,15 @@ def p_literal(p):
 			   | STRING
 			   | BOOLEAN
 	'''
-	p[0] = ('literal', p[1])
+	p[0] = p[1]
 
 def p_error(p):
 	print(f"Syntax error in input! Unexpected token: {p.value} ({p.type}) at line {p.lineno};")
+
+def p_empty(p):
+	'''empty :
+	'''
+	pass
 
 parser = None
 try:
@@ -50,6 +77,7 @@ if __name__ == '__main__':
 	with open(os.path.dirname(__file__) + '\\input.txt') as f:
 		input = f.read()
 	try:
-		generateAST(input)
+		astdata = generateAST(input)
+		print(astdata)
 	except Exception as e:
 		print(e)

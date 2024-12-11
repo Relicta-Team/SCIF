@@ -1,6 +1,9 @@
 
 
-gvar_int = 1;
-gvar_float = 24;
-gvar_str = "hello world";
-gvar_bool = false;
+gvar_int = 1 ;
+gvar_float = 24	;
+gvar_str = "hello world"
+;
+gvar_bool = false
+
+;
