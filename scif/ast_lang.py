@@ -22,12 +22,12 @@ class ASTNode:
 
 class LiteralNode(ASTNode):
 	def __init__(self, value):
-		super().__init__('Literal', value=value)
+		super().__init__('Lit', value=value)
 
 class IdentifierNode(ASTNode):
 	def __init__(self, name):
-		super().__init__('Identifier', value=name)
+		super().__init__('Ident', value=name)
 
 class AssignmentNode(ASTNode):
 	def __init__(self, target, expression):
-		super().__init__('Assignment', children=[target, expression])
+		super().__init__('Assign', children=[target, expression])
