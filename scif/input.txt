@@ -1,9 +1,10 @@
 
+namespace(test,gvar_)
 
-gvar_int = 1 ;
-gvar_float = 24	;
-gvar_str = "hello world"
+decl(int) gvar_int = 1 ;
+ gvar_float = 24	;
+decl(string) gvar_str = "hello world"
 ;
-gvar_bool = false
+decl(bool) gvar_bool = false
 
 ;

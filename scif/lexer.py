@@ -19,7 +19,17 @@ reserved = {
 	'in': 'IN',
 	'break': 'BREAK',
 	'continue': 'CONTINUE',
+	"private": "LVDECLARE"
 }
+
+langSpec = (
+	"NAMESPACESPEC",
+	"DECLSPEC",
+	"ENUMSPEC",
+	"INLINEMACROSPEC",
+	"CONSTSPEC",
+	"MACROCONSTSPEC",
+)
 
 conditions_symbols = (
 	'LT','GT','LTE','GTE','EQUALV','EQUALVT','NOTEQUALV','NOTEQUALVT','OR','AND'
@@ -61,7 +71,7 @@ tokens = (
 	'OPEN_BRACE',
 	'CLOSE_BRACE',
 	
-	) + tuple(reserved.values()) + conditions_symbols
+	) + tuple(reserved.values()) + conditions_symbols + langSpec
 
 
 literals = '();={}:!,[]'
@@ -80,6 +90,29 @@ def t_PP_DIRECTIVE(t):
 	return t
 
 
+def t_NAMESPACESPEC(t):
+	r'namespace\([a-zA-Z_][a-zA-Z0-9_]*\s*\,\s*[a-zA-Z_][a-zA-Z0-9_]*\)'
+	return t
+
+def t_DECLSPEC(t):
+	r'decl\([^\)]*\)'
+	return t
+
+def t_ENUMSPEC(t):
+	r'enum\([a-zA-Z_][a-zA-Z0-9_]*\s*\,\s*[a-zA-Z_][a-zA-Z0-9_]*\)'
+	return t
+
+def t_INLINEMACROSPEC(t):
+	r'\binline_macro\b'
+	return t
+
+def t_CONSTSPEC(t):
+	r'\bconst\b'
+	return t
+
+def t_MACROCONSTSPEC(t):
+	r'\bmacro_const\([a-zA-Z_][a-zA-Z0-9_]*\s*\,\s*[a-zA-Z_][a-zA-Z0-9_]*\)'
+	return t
 
 # t_ASSIGN = r'='
 t_SEMICOLON = r';'
@@ -89,6 +122,7 @@ t_OPEN_BRACKET = r'\['
 t_CLOSE_BRACKET = r'\]'
 t_OPEN_BRACE = r'\{'
 t_CLOSE_BRACE = r'\}'
+
 
 def t_BOOLEAN(t):
 	r'(true|false)'
