@@ -11,7 +11,7 @@ start = 'prog'
 def p_prog(p):
 	'''prog : statements
 	'''
-	p[0] = p[1]
+	p[0] = ASTNode('Program', children=p[1])
 
 def p_statement(p):
 	# todo add control_structures, code_block, use '(', ')' for condition
@@ -26,31 +26,35 @@ def p_statements(p):
 				  | empty
 	'''
 	if len(p) > 2:
-		p[0] = [p[1]] + p[3] if p[3]!= None else []
-		pass
+		p[0] = [p[1]] + p[3]
+	elif p[1] is not None:
+		p[0] = [p[1]]
 	else:
-		if p[1] != None:
-			p[0] = p[1]
+		p[0] = []
 	
 
 def p_expression(p):
 	'''expression : literal
 				  | IDENT
 	'''
-	p[0] = ('rvalue', p[1])
+	if isinstance(p[1], str):  # Если идентификатор
+		p[0] = IdentifierNode(p[1])
+	else:  # Если литерал
+		p[0] = p[1]
 
 
 def p_assignment(p):
 	'''assignment : IDENT '=' expression
 	'''
-	p[0] = ('set_glob', p[1], p[3])
+	target = IdentifierNode(p[1])
+	p[0] = AssignmentNode(target, p[3])
 
 def p_literal(p):
 	'''literal : NUMBER
 			   | STRING
 			   | BOOLEAN
 	'''
-	p[0] = p[1]
+	p[0] = LiteralNode(p[1])
 
 def p_error(p):
 	print(f"Syntax error in input! Unexpected token: {p.value} ({p.type}) at line {p.lineno};")
@@ -78,6 +82,6 @@ if __name__ == '__main__':
 		input = f.read()
 	try:
 		astdata = generateAST(input)
-		print(astdata)
+		print(astdata.pretty_print())
 	except Exception as e:
 		print(e)

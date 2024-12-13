@@ -1,48 +1,33 @@
 
 
-
-class Node:
-	def __init__(self, line):
-		self.line = line
-
-
-#preprocessor 
-class Directive(Node):
-	pass
-
-class Include(Directive):
-	def __init__(self, line, path):
-		super().__init__(line, path)
-
-class DefineVar(Directive):
-	def __init__(self, line, name, value):
-		super().__init__(line)
-		self.name = name
+class ASTNode:
+	def __init__(self, nodetype, children=None, value=None):
+		self.nodetype = nodetype
+		self.children = children if children else []
 		self.value = value
 
-class DefineFunc(Directive):
-	def __init__(self, line, name, args, body):
-		super().__init__(line)
-		self.name = name
-		self.args = args
-		self.body = body
+	def __repr__(self):
+		if self.value is not None:
+			return f"{self.nodetype}({self.value})"
+		return f"{self.nodetype}({', '.join(map(str, self.children))})"
+	
+	def pretty_print(self, indent=0):
+		tab = "    " * indent
+		if self.value is not None:
+			return f"{tab}{self.nodetype}: {self.value}\n"
+		result = f"{tab}{self.nodetype}:\n"
+		for child in self.children:
+			result += child.pretty_print(indent + 1)
+		return result
 
-class Operator(Node):
-	def __init__(self, line, opName):
-		super().__init__(line)
-		self.opName = opName
+class LiteralNode(ASTNode):
+	def __init__(self, value):
+		super().__init__('Literal', value=value)
 
-class NularOp(Operator):
-	def __init__(self, line, opName):
-		super().__init__(line, opName)
+class IdentifierNode(ASTNode):
+	def __init__(self, name):
+		super().__init__('Identifier', value=name)
 
-class UnaryOp(Operator):
-	def __init__(self, line, opName, expr):
-		super().__init__(line, opName)
-		self.expr = expr
-
-class BinaryOp(Operator):
-	def __init__(self, line, opName, left, right):
-		super().__init__(line, opName)
-		self.left = left
-		self.right = right
+class AssignmentNode(ASTNode):
+	def __init__(self, target, expression):
+		super().__init__('Assignment', children=[target, expression])
