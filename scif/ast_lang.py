@@ -3,12 +3,20 @@
 import enum
 import re
 
+class CodeContext:
+	def __init__(self,nsDict):
+		self.nsDict = nsDict
 
 class ASTNode:
 	def __init__(self, nodetype, children=None, value=None):
 		self.nodetype = nodetype
 		self.children = children if children else []
 		self.value = value
+
+		self.lineno = -1 #-1 is system node
+
+	def setLineNumber(self,num):
+		self.lineno = num
 
 	#overload [] operator
 	def __getitem__(self, index):
@@ -30,6 +38,18 @@ class ASTNode:
 			else:
 				result += f"{tab}    NOT_NODE:{child}\n"
 		return result
+	
+	def getCode(self,codeCtx:CodeContext=None):
+		if self.value is not None:
+			return ""
+		result = ""
+		for child in self.children:
+			if child is None: continue
+			if isinstance(child, ASTNode):
+				result += child.getCode(codeCtx) + ";" #because program is statement based
+			else:
+				result += f"{child}"
+		return result
 
 	def get_string_value_repr(self):
 		return self.value
@@ -48,6 +68,9 @@ class LiteralNode(ValueNode):
 	
 	def get_string_value_repr(self):
 		return f"({self.typename}){super().get_string_value_repr()}"
+	
+	def getCode(self,codeCtx:CodeContext=None):
+		return self.value
 
 class TypeNameSpec:
 	def __init__(self, typename):
@@ -75,7 +98,53 @@ class IdentifierNode(ValueNode):
 
 	def get_string_value_repr(self):
 		return f"[{self.identType.name}] {self.typename} {super().get_string_value_repr()}"
+	
+	def getCode(self,codeCtx:CodeContext):
+		return self.value
 
 class AssignmentNode(ASTNode):
 	def __init__(self, target, expression):
 		super().__init__('Assign', children=[target, expression])
+
+	def getCode(self,codeCtx:CodeContext):
+		ident = self.children[0]
+		rval = self.children[1]
+		return f"{ident.getCode(codeCtx)} = {rval.getCode(codeCtx)}"
+
+
+class IfNode(ASTNode):
+	def __init__(self, condition, true_block, false_block=None):
+		codes = [condition,true_block]
+		if false_block is not None:
+			codes.append(false_block)
+		super().__init__('If', children=codes)
+
+	def getCode(self,curline=0):
+		cbIf = self.children[1]
+		if isinstance(cbIf, CodeBlock) and len(cbIf.children) == 1:
+			cbIf = cbIf.children[0]
+		if len(self.children) == 2:
+			return f"if {self.children[0].getCode(curline)} {cbIf.getCode(curline)}"
+		cbEl = self.children[2]
+		if isinstance(cbEl, CodeBlock) and len(cbEl.children) == 1:
+			cbEl = cbEl.children[0]
+		return f"if {self.children[0].getCode(curline)} {cbIf.getCode(curline)} else {cbEl.getCode(curline)}"
+
+
+class CodeBlock(ASTNode):
+	"""children is a list of statements"""
+	def __init__(self, statements):
+		super().__init__('CodeBlock', children=statements)
+
+	def getCode(self,curline=0):
+		codes = "{"
+		for x in self.children:
+			codes += x.getCode(curline) + ";"
+		return codes + "}"
+
+class GroupedExpression(ASTNode):
+	def __init__(self, expression):
+		super().__init__('GroupExpr', children=[expression])
+
+	def getCode(self,curline=0):
+		return f"({self.children[0].getCode(curline)})"

@@ -1,6 +1,8 @@
 
 namespace(test,gvar_)
 
+if (true) then { a = 1; b = 2};
+
 decl(int) gvar_int = 1 ;
  gvar_float = 24	;
 decl(string) gvar_str = "hello world"

@@ -1,6 +1,7 @@
 from lexer import lexer,tokens
 import ply.yacc as yacc
 import re
+from visitor import visit_global
 
 
 # https://community.bistudio.com/wiki/Operators
@@ -26,8 +27,31 @@ def p_statement(p):
 	'''statement : moduleMemberDeclare
 				 | expression
 				 | assignment
+				 | controlStructures
 	'''
 	p[0] = p[1]
+
+def p_controlStructures(p):
+	'''controlStructures : ifStructure
+	'''
+	p[0] = p[1]
+
+def p_ifStructure(p):
+	# | whileStructure
+	# 					 | forStructure
+	# 					 | foreachStructure 
+	'''ifStructure : IF expression THEN codeBlock
+	               | IF expression THEN codeBlock ELSE codeBlock
+	'''
+	if len(p) == 5:
+		p[0] = IfNode(p[2], p[4])
+	else:
+		p[0] = IfNode(p[2], p[4], p[6])
+
+def p_codeBlock(p):
+	'''codeBlock : OPEN_BRACE statements CLOSE_BRACE
+	'''
+	p[0] = CodeBlock(p[2])
 
 def p_namespaceDeclare(p:yacc.YaccProduction):
 	'''namespaceDeclare : NAMESPACESPEC
@@ -60,11 +84,16 @@ def p_statements(p):
 def p_expression(p):
 	'''expression : literal
 				  | IDENT
+				  | OPEN_PAREN expression CLOSE_PAREN
 	'''
-	if isinstance(p[1], str):  # Если идентификатор
-		p[0] = IdentifierNode(p[1])
-	else:  # Если литерал
-		p[0] = p[1]
+	if len(p) == 4:
+		p[0] = GroupedExpression(p[2])
+	else:
+		if isinstance(p[1], str):  # Если идентификатор
+			p[0] = IdentifierNode(p[1])
+			p[0].setLineNumber(p.lexer.lineno)
+		else:  # Если литерал
+			p[0] = p[1]
 
 
 def p_assignment(p):
@@ -73,6 +102,8 @@ def p_assignment(p):
 	target = IdentifierNode(p[1])
 	exp = p[3]
 	p[0] = AssignmentNode(target, exp)
+	p[0].setLineNumber(p.lexer.lineno)
+	target.setLineNumber(p.lexer.lineno)
 	if isCompileContext:
 		if isinstance(exp, LiteralNode):
 			target.typename = exp.typename
@@ -93,6 +124,7 @@ def p_literal(p):
 			   | BOOLEAN
 	'''
 	p[0] = LiteralNode(p[1])
+	p[0].setLineNumber(p.lexer.lineno)
 	ptype = p.slice[1].type
 	if ptype == 'NUMBER':
 		p[0].typename = TypeNameSpec('float')
@@ -133,5 +165,8 @@ if __name__ == '__main__':
 		astdata = generateAST(input)
 		print(f"NS_INFO: {globNamespaceDecl}")
 		print(astdata.pretty_print())
+		print("\n\n\n" + ("*" * 30))
+		print(astdata.getCode())
+		#visit_global(astdata,debugPrint=True)
 	except Exception as e:
 		print(e)
