@@ -1,5 +1,5 @@
 import ply.lex as lex
-
+import re
 """
 	For example tokenize see:
 		https://github.com/eliben/pycparser/blob/main/pycparser/c_lexer.py
@@ -46,8 +46,8 @@ t_OR=r'\|\|'
 
 tokens = (
 	#preprocessor
-	'PP_COMMENT_LINE',
-	'PP_COMMENT_BLOCK',
+	'PP_COMMENTLINE',
+	'PP_COMMENTBLOCK',
 	'PP_DIRECTIVE',
 	'PP_IF',
 	'PP_ELSE',
@@ -81,8 +81,21 @@ states = (
 )
 
 t_ignore = ' \t\r'
-t_PP_COMMENT_LINE = r'//.*'
-t_PP_COMMENT_BLOCK = r'/\*.*\*/'
+def t_PP_COMMENTLINE(t): 
+	r'((//.*?)(\n|$))'
+	regx = re.match(r'((//.*?)(\n|$))',t.value)
+	t.value = regx.group(2)
+	t.lexer.commentsDict[t.lexpos] = t.value
+	if regx.group(3) == '\n':
+		t.lexer.lineno += 1
+	#return t
+def t_PP_COMMENTBLOCK(t): 
+	#r'\/\*.*\*\/'
+	r'(/\*(.|\n)*?\*/)'
+	ncr = t.value.count("\n")
+	t.lexer.commentsDict[t.lexpos] = t.value
+	t.lexer.lineno += ncr
+	#return t
 
 def t_PP_DIRECTIVE(t):
 	r'\#(include|define|undef)'
@@ -154,7 +167,7 @@ def t_string_end(t):
 	return t
 
 def t_error(t):
-	print("Illegal character '%s'" % t.value[0])
+	print(f"Illegal character '{t.value[0]}' at line {t.lineno}")
 	t.lexer.skip(1)
 
 def t_newline(t):
@@ -162,6 +175,7 @@ def t_newline(t):
 	t.lexer.lineno += len(t.value)
 
 lexer = lex.lex(reflags=lex.re.UNICODE | lex.re.DOTALL)
+lexer.commentsDict = {}
 
 if __name__ == '__main__':
 	import os

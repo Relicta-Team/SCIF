@@ -20,7 +20,7 @@ isCompileContext = True
 def p_prog(p):
 	'''prog : statements
 	'''
-	p[0] = ASTNode('Program', children=p[1])
+	p[0] = ASTNode('Program', 0, children=p[1])
 
 def p_statement(p):
 	# todo add control_structures, code_block, use '(', ')' for condition
@@ -43,14 +43,14 @@ def p_ifStructure(p):
 	               | IF expression THEN codeBlock ELSE codeBlock
 	'''
 	if len(p) == 5:
-		p[0] = IfNode(p[2], p[4])
+		p[0] = IfNode(p.slice[1].lineno, p[2], p[4])
 	else:
-		p[0] = IfNode(p[2], p[4], p[6])
+		p[0] = IfNode(p.slice[1].lineno, p[2], p[4], p[6])
 
 def p_codeBlock(p):
 	'''codeBlock : OPEN_BRACE statements CLOSE_BRACE
 	'''
-	p[0] = CodeBlock(p[2])
+	p[0] = CodeBlock(p.slice[1].lineno, p[2])
 
 def p_namespaceDeclare(p:yacc.YaccProduction):
 	'''namespaceDeclare : NAMESPACESPEC
@@ -87,11 +87,10 @@ def p_expression(p):
 				  | controlStructuresRValue
 	'''
 	if len(p) == 4:
-		p[0] = GroupedExpression(p[2])
+		p[0] = GroupedExpression(p.slice[1].lineno, p[2])
 	else:
 		if isinstance(p[1], str):  # Если идентификатор
-			p[0] = IdentifierNode(p[1])
-			p[0].setLineNumber(p.lexer.lineno)
+			p[0] = IdentifierNode(p.slice[1].lineno, p[1])
 		else:  # Если литерал
 			p[0] = p[1]
 
@@ -99,11 +98,9 @@ def p_expression(p):
 def p_assignment(p):
 	'''assignment : IDENT '=' expression
 	'''
-	target = IdentifierNode(p[1])
+	target = IdentifierNode(p.slice[1].lineno, p[1])
 	exp = p[3]
-	p[0] = AssignmentNode(target, exp)
-	p[0].setLineNumber(p.lexer.lineno)
-	target.setLineNumber(p.lexer.lineno)
+	p[0] = AssignmentNode(p.slice[2].lineno, target, exp)
 	if isCompileContext:
 		if isinstance(exp, LiteralNode):
 			target.typename = exp.typename
@@ -125,8 +122,7 @@ def p_literal(p):
 			   | STRING
 			   | BOOLEAN
 	'''
-	p[0] = LiteralNode(p[1])
-	p[0].setLineNumber(p.lexer.lineno)
+	p[0] = LiteralNode(p.slice[1].lineno, p[1])
 	ptype = p.slice[1].type
 	if ptype == 'NUMBER':
 		p[0].typename = TypeNameSpec('float')
@@ -134,6 +130,24 @@ def p_literal(p):
 		p[0].typename = TypeNameSpec('string')
 	elif ptype == 'BOOLEAN':
 		p[0].typename = TypeNameSpec('bool')
+
+# def p_PP_COMMENTBLOCK(p):
+# 	'''prog : ppAnyComment
+# 	   statement : ppAnyComment statement
+# 	   | statement ppAnyComment
+# 	   expression : ppAnyComment expression
+# 	   | expression ppAnyComment
+# 	   literal : ppAnyComment literal
+# 	   | literal ppAnyComment
+# 	'''
+# 	p[0] = p[1]
+# 	pass
+
+# def p_ppAnyComment(p):
+# 	'''ppAnyComment : PP_COMMENTBLOCK
+# 					| PP_COMMENTLINE
+# 	'''
+# 	p[0] = p[1]
 
 def p_error(p):
 	print(f"Syntax error in input! Unexpected token: {p.value} ({p.type}) at line {p.lineno};")
@@ -168,7 +182,8 @@ if __name__ == '__main__':
 		print(f"NS_INFO: {globNamespaceDecl}")
 		print(astdata.pretty_print())
 		print("\n" + ("*" * 30))
-		print(astdata.getCode())
+		ctx = CodeContext(globNamespaceDecl,lexer.commentsDict)
+		print( '\n'.join( [f'L{ind+1}: {lin}' for ind, lin in enumerate(astdata.getCode(ctx).split("\n"))] ) )
 		#visit_global(astdata,debugPrint=True)
 	except Exception as e:
 		print(e)

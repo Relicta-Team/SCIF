@@ -4,16 +4,18 @@ import enum
 import re
 
 class CodeContext:
-	def __init__(self,nsDict):
+	def __init__(self,nsDict,commDict):
 		self.nsDict = nsDict
+		self.commDict = commDict
+		self.curLine = 1
 
 class ASTNode:
-	def __init__(self, nodetype, children=None, value=None):
+	def __init__(self, nodetype, lineNum, children=None, value=None):
 		self.nodetype = nodetype
 		self.children = children if children else []
 		self.value = value
 
-		self.lineno = -1 #-1 is system node
+		self.lineno = lineNum #-1 is system node
 
 	def setLineNumber(self,num):
 		self.lineno = num
@@ -34,15 +36,17 @@ class ASTNode:
 		result = f"{tab}{self.get_node_type_repr()}:\n"
 		for child in self.children:
 			if isinstance(child, ASTNode):
-				result += child.pretty_print(indent + 1) #(f"L{child.lineno}:")+
+				result += (f"L{child.lineno}")
+				result += child.pretty_print(indent + 1)
 			else:
 				result += f"{tab}    NOT_NODE:{child}\n"
 		return result
 	
 	def getCode(self,codeCtx:CodeContext=None):
 		if self.value is not None:
+			raise Exception(f"Unhandled getCode value condition for ast type: {self.__class__}")
 			return ""
-		result = ""
+		result = self._getNextLines(codeCtx) + ""
 		for child in self.children:
 			if child is None: continue
 			if isinstance(child, ASTNode):
@@ -57,23 +61,39 @@ class ASTNode:
 	def get_node_type_repr(self):
 		return self.nodetype
 
+	def _checkLine(self,codeCtx:CodeContext):
+		if self.lineno <= 0: return 0
+		if self.lineno > codeCtx.curLine:
+			diff = self.lineno - codeCtx.curLine
+			codeCtx.curLine = self.lineno
+			return diff
+		return 0
+	
+	def _getNextLines(self,codeCtx:CodeContext):
+		"""Must be called only once per node"""
+		diff = self._checkLine(codeCtx)
+		if diff > 0:
+			return '\n' * diff
+		else:
+			return ""
+
 class ValueNode(ASTNode):
 	"""RValue node abstract"""
-	def __init__(self, nodetype, children=None, value=None):
-		super().__init__(nodetype, children, value)
+	def __init__(self, nodetype, lineNum, children=None, value=None):
+		super().__init__(nodetype,lineNum, children, value)
 		self.typename:TypeNameSpec = TypeNameSpec('any')
 
 class LiteralNode(ValueNode):
 	"""Literal value (int,string etc...)"""
-	def __init__(self, value):
-		super().__init__('Lit', value=value)
+	def __init__(self, lineNum, value):
+		super().__init__('Lit', lineNum, value=value)
 		self.typename = TypeNameSpec('any')
 	
 	def get_string_value_repr(self):
 		return f"({self.typename}){super().get_string_value_repr()}"
 	
 	def getCode(self,codeCtx:CodeContext=None):
-		return self.value
+		return self._getNextLines(codeCtx) + self.value
 
 class TypeNameSpec:
 	def __init__(self, typename):
@@ -92,8 +112,8 @@ class IdentifierNode(ValueNode):
 		def __repr__(self):
 			return f"ID_T_{self.name}"
 
-	def __init__(self, name):
-		super().__init__('Ident', value=name)
+	def __init__(self, lineNum, name):
+		super().__init__('Ident', lineNum, value=name)
 		self.identType = IdentifierNode.Type.UNKNOWN
 		if name.startswith('_'):
 			self.identType = IdentifierNode.Type.LOCAL_VARIABLE
@@ -104,11 +124,11 @@ class IdentifierNode(ValueNode):
 		return f"[{self.identType.name}] {self.typename} {super().get_string_value_repr()}"
 	
 	def getCode(self,codeCtx:CodeContext):
-		return self.value
+		return self._getNextLines(codeCtx) + self.value
 
 class AssignmentNode(ASTNode):
-	def __init__(self, target, expression):
-		super().__init__('Assign', children=[target, expression])
+	def __init__(self, lineNum, target, expression):
+		super().__init__('Assign', lineNum, children=[target, expression])
 		self.assignType = AssignmentNode.AssignType.UNKNOWN
 
 	class AssignType(enum.Enum):
@@ -124,46 +144,52 @@ class AssignmentNode(ASTNode):
 	def getCode(self,codeCtx:CodeContext):
 		ident = self.children[0]
 		rval = self.children[1]
-		return f"{ident.getCode(codeCtx)} = {rval.getCode(codeCtx)}"
+		
+		return f"{ident.getCode(codeCtx)} {self._getNextLines(codeCtx)}= {rval.getCode(codeCtx)}"
 
 
 class IfNode(ASTNode):
-	def __init__(self, condition, true_block, false_block=None):
+	def __init__(self, lineNum, condition, true_block, false_block=None):
 		codes = [condition,true_block]
 		if false_block is not None:
 			codes.append(false_block)
-		super().__init__('If', children=codes)
+		super().__init__('If', lineNum, children=codes)
 
 	def getCode(self,codeCtx:CodeContext):
+		
+		nl = self._getNextLines(codeCtx)
+
+		ifCond = self.children[0]
 		cbIf = self.children[1]
 		if isinstance(cbIf, CodeBlock) and len(cbIf.children) == 1:
-			cbIf = cbIf.children[0]
+			cbIf = cbIf.children[0] # one-statement implicit block
 		if len(self.children) == 2:
-			return f"if {self.children[0].getCode(codeCtx)} {cbIf.getCode(codeCtx)}"
+			return f"{nl}if {ifCond.getCode(codeCtx)} {cbIf.getCode(codeCtx)}"
 		cbEl = self.children[2]
 		if isinstance(cbEl, CodeBlock) and len(cbEl.children) == 1:
-			cbEl = cbEl.children[0]
-		return f"if {self.children[0].getCode(codeCtx)} {cbIf.getCode(codeCtx)} else {cbEl.getCode(curline)}"
+			cbEl = cbEl.children[0] # one-statement implicit block
+		
+		return f"{nl}if {ifCond.getCode(codeCtx)} {cbIf.getCode(codeCtx)} else {cbEl.getCode(curline)}"
 
 
 class CodeBlock(ASTNode):
 	"""children is a list of statements"""
-	def __init__(self, statements):
-		super().__init__('CodeBlock', children=statements)
+	def __init__(self, lineNum, statements):
+		super().__init__('CodeBlock', lineNum, children=statements)
 
 	def getCode(self,codeCtx:CodeContext):
-		codes = "{"
+		codes = self._getNextLines(codeCtx) +"{"
 		for x in self.children:
 			codes += x.getCode(codeCtx) + ";"
 		return codes + "}"
 
 class GroupedExpression(ASTNode):
-	def __init__(self, expression):
-		super().__init__('GroupExpr', children=[expression])
+	def __init__(self, lineNum, expression):
+		super().__init__('GroupExpr', lineNum, children=[expression])
 
 	def getCode(self,codeCtx:CodeContext):
-		return f"({self.children[0].getCode(codeCtx)})"
+		return f"{self._getNextLines(codeCtx)}({self.children[0].getCode(codeCtx)})"
 	
 class GroupedStatement(GroupedExpression):
-	def __init__(self, statement):
-		super().__init__('GroupStmt', children=[statement])
+	def __init__(self, lineNum, statement):
+		super().__init__('GroupStmt', lineNum, children=[statement])
