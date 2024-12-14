@@ -193,3 +193,35 @@ class GroupedExpression(ASTNode):
 class GroupedStatement(GroupedExpression):
 	def __init__(self, lineNum, statement):
 		super().__init__('GroupStmt', lineNum, children=[statement])
+
+class WhileNode(ASTNode):
+	def __init__(self, lineNum, condition, block):
+		super().__init__('While', lineNum, children=[condition,block])
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}while {self.children[0].getCode(codeCtx)} {self.children[1].getCode(codeCtx)}"
+	
+class ForNode(ASTNode):
+	def __init__(self, lineNum, var, start, end, block, step=None):
+		states = [var,start,end,block]
+		if step is not None:
+			states.append(step)
+		super().__init__('For', lineNum, children=states)
+
+	def getCode(self,codeCtx:CodeContext):
+		forIter = self.children[0]
+		begin = self.children[1]
+		end = self.children[2]
+		block = self.children[3]
+		if len(self.children) == 4:
+			return f"{self._getNextLines(codeCtx)}for ({forIter.getCode(codeCtx)}; {begin.getCode(codeCtx)}; {end.getCode(codeCtx)};) {block.getCode(codeCtx)}"
+		else:
+			step = self.children[4]
+			return f"{self._getNextLines(codeCtx)}for ({forIter.getCode(codeCtx)}; {begin.getCode(codeCtx)}; {end.getCode(codeCtx)}; {step.getCode(codeCtx)}) {block.getCode(codeCtx)}"
+	
+class ForeachNode(ASTNode):
+	def __init__(self, lineNum, collection, block):
+		super().__init__('Foreach', lineNum, children=[collection,block])
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}foreach {self.children[0].getCode(codeCtx)} {self.children[1].getCode(codeCtx)}"

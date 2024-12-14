@@ -9,7 +9,6 @@ namespace(test,gvar_)
 
 if 
 
-
 (true) then {a = 1; 
 	 
 	 
@@ -25,3 +24,8 @@ decl(string) gvar_str = "hello world"
 decl(bool) gvar_bool = false
 
 ;
+
+while{true} do {};
+for "_i" from 1 to 100 do {};
+for "_i" from 1 to 5 step 1 do {};
+{} foreach undefvar_aslist;

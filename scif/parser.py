@@ -67,6 +67,7 @@ def p_namespaceDeclare(p:yacc.YaccProduction):
 def p_statements(p):
 	'''statements : statement
 				  | statement SEMICOLON statements
+				  | controlStructuresLValue SEMICOLON statements
 				  | empty namespaceDeclare statements
 				  | empty
 	'''
@@ -94,6 +95,35 @@ def p_expression(p):
 		else:  # Если литерал
 			p[0] = p[1]
 
+
+def p_controlStructuresLValue(p):
+	'''controlStructuresLValue : whileStructure
+							   | forStructure
+							   | foreachStructure
+	'''
+	p[0] = p[1]
+
+def p_whileStructure(p): #* в проде нигде не передается значение или ссылка на код в condition-блоке
+	'''whileStructure : WHILE codeBlock DO codeBlock
+	'''
+	p[0] = WhileNode(p.slice[1].lineno, p[2], p[4])
+
+def p_forStructure(p):
+	'''forStructure : FOR STRING FROM expression TO expression DO codeBlock
+					| FOR STRING FROM expression TO expression STEP expression DO codeBlock
+	'''
+	if len(p) == 9:
+		p[0] = ForNode(p.slice[1].lineno, p[2], p[4], p[6], p[8])
+	else:
+		p[0] = ForNode(p.slice[1].lineno, p[2], p[4], p[6], p[8], p[10])
+
+def p_foreachStructure(p):
+	'''foreachStructure : codeBlock FOREACH statement
+	'''
+	p[0] = ForeachNode(
+		#p.slice[1].lineno
+		p[3].lineno
+		, p[3], p[1])
 
 def p_assignment(p):
 	'''assignment : IDENT '=' expression
