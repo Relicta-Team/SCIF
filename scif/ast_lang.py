@@ -119,16 +119,16 @@ class IfNode(ASTNode):
 			codes.append(false_block)
 		super().__init__('If', children=codes)
 
-	def getCode(self,curline=0):
+	def getCode(self,codeCtx:CodeContext):
 		cbIf = self.children[1]
 		if isinstance(cbIf, CodeBlock) and len(cbIf.children) == 1:
 			cbIf = cbIf.children[0]
 		if len(self.children) == 2:
-			return f"if {self.children[0].getCode(curline)} {cbIf.getCode(curline)}"
+			return f"if {self.children[0].getCode(codeCtx)} {cbIf.getCode(codeCtx)}"
 		cbEl = self.children[2]
 		if isinstance(cbEl, CodeBlock) and len(cbEl.children) == 1:
 			cbEl = cbEl.children[0]
-		return f"if {self.children[0].getCode(curline)} {cbIf.getCode(curline)} else {cbEl.getCode(curline)}"
+		return f"if {self.children[0].getCode(codeCtx)} {cbIf.getCode(codeCtx)} else {cbEl.getCode(curline)}"
 
 
 class CodeBlock(ASTNode):
@@ -136,15 +136,15 @@ class CodeBlock(ASTNode):
 	def __init__(self, statements):
 		super().__init__('CodeBlock', children=statements)
 
-	def getCode(self,curline=0):
+	def getCode(self,codeCtx:CodeContext):
 		codes = "{"
 		for x in self.children:
-			codes += x.getCode(curline) + ";"
+			codes += x.getCode(codeCtx) + ";"
 		return codes + "}"
 
 class GroupedExpression(ASTNode):
 	def __init__(self, expression):
 		super().__init__('GroupExpr', children=[expression])
 
-	def getCode(self,curline=0):
-		return f"({self.children[0].getCode(curline)})"
+	def getCode(self,codeCtx:CodeContext):
+		return f"({self.children[0].getCode(codeCtx)})"

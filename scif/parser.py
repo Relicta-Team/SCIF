@@ -165,7 +165,7 @@ if __name__ == '__main__':
 		astdata = generateAST(input)
 		print(f"NS_INFO: {globNamespaceDecl}")
 		print(astdata.pretty_print())
-		print("\n\n\n" + ("*" * 30))
+		print("\n" + ("*" * 30))
 		print(astdata.getCode())
 		#visit_global(astdata,debugPrint=True)
 	except Exception as e:
