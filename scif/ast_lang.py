@@ -24,17 +24,17 @@ class ASTNode:
 
 	def __repr__(self):
 		if self.value is not None:
-			return f"{self.nodetype}({self.value})"
-		return f"{self.nodetype}({', '.join(map(str, self.children))})"
+			return f"{self.get_node_type_repr()}({self.value})"
+		return f"{self.get_node_type_repr()}({', '.join(map(str, self.children))})"
 	
 	def pretty_print(self, indent=0):
 		tab = "    " * indent
 		if self.value is not None:
-			return f"{tab}{self.nodetype}: {self.get_string_value_repr()}\n"
-		result = f"{tab}{self.nodetype}:\n"
+			return f"{tab}{self.get_node_type_repr()}: {self.get_string_value_repr()}\n"
+		result = f"{tab}{self.get_node_type_repr()}:\n"
 		for child in self.children:
 			if isinstance(child, ASTNode):
-				result += child.pretty_print(indent + 1)
+				result += child.pretty_print(indent + 1) #(f"L{child.lineno}:")+
 			else:
 				result += f"{tab}    NOT_NODE:{child}\n"
 		return result
@@ -53,6 +53,9 @@ class ASTNode:
 
 	def get_string_value_repr(self):
 		return self.value
+	
+	def get_node_type_repr(self):
+		return self.nodetype
 
 class ValueNode(ASTNode):
 	"""RValue node abstract"""
@@ -85,7 +88,6 @@ class IdentifierNode(ValueNode):
 		UNKNOWN = 0
 		LOCAL_VARIABLE = 1
 		GLOBAL_VARIABLE = 2
-		GLOBAL_FUNCTION = 3
 
 		def __repr__(self):
 			return f"ID_T_{self.name}"
@@ -95,6 +97,8 @@ class IdentifierNode(ValueNode):
 		self.identType = IdentifierNode.Type.UNKNOWN
 		if name.startswith('_'):
 			self.identType = IdentifierNode.Type.LOCAL_VARIABLE
+		else:
+			self.identType = IdentifierNode.Type.GLOBAL_VARIABLE
 
 	def get_string_value_repr(self):
 		return f"[{self.identType.name}] {self.typename} {super().get_string_value_repr()}"
@@ -105,6 +109,17 @@ class IdentifierNode(ValueNode):
 class AssignmentNode(ASTNode):
 	def __init__(self, target, expression):
 		super().__init__('Assign', children=[target, expression])
+		self.assignType = AssignmentNode.AssignType.UNKNOWN
+
+	class AssignType(enum.Enum):
+		UNKNOWN = 0
+		LV_INIT = 1
+		LV_ASSIGN = 2
+		GV_INIT = 3 # this type used for global var decl
+		GV_ASSIGN = 4
+
+	def get_node_type_repr(self):
+		return f'{super().get_node_type_repr()} [{self.assignType.name}]'
 
 	def getCode(self,codeCtx:CodeContext):
 		ident = self.children[0]
@@ -148,3 +163,7 @@ class GroupedExpression(ASTNode):
 
 	def getCode(self,codeCtx:CodeContext):
 		return f"({self.children[0].getCode(codeCtx)})"
+	
+class GroupedStatement(GroupedExpression):
+	def __init__(self, statement):
+		super().__init__('GroupStmt', children=[statement])

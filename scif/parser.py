@@ -27,12 +27,11 @@ def p_statement(p):
 	'''statement : moduleMemberDeclare
 				 | expression
 				 | assignment
-				 | controlStructures
 	'''
 	p[0] = p[1]
 
-def p_controlStructures(p):
-	'''controlStructures : ifStructure
+def p_controlStructuresRValue(p):
+	'''controlStructuresRValue : ifStructure
 	'''
 	p[0] = p[1]
 
@@ -56,7 +55,7 @@ def p_codeBlock(p):
 def p_namespaceDeclare(p:yacc.YaccProduction):
 	'''namespaceDeclare : NAMESPACESPEC
 	'''
-	mtch = re.match('namespace\((\w+)\s*,\s*([\w;]+)\)',p[1])
+	mtch = re.match(r'namespace\((\w+)\s*,\s*([\w;]+)\)',p[1])
 	namespaceName = mtch.group(1)
 	patternsStartWith = mtch.group(2).split(';')
 	if len(globNamespaceDecl) > 0:
@@ -85,6 +84,7 @@ def p_expression(p):
 	'''expression : literal
 				  | IDENT
 				  | OPEN_PAREN expression CLOSE_PAREN
+				  | controlStructuresRValue
 	'''
 	if len(p) == 4:
 		p[0] = GroupedExpression(p[2])
@@ -108,6 +108,7 @@ def p_assignment(p):
 		if isinstance(exp, LiteralNode):
 			target.typename = exp.typename
 		target.identType = IdentifierNode.Type.GLOBAL_VARIABLE
+		p[0].assignType = AssignmentNode.AssignType.GV_INIT
 
 
 def p_moduleMemberDeclare(p):
@@ -116,6 +117,7 @@ def p_moduleMemberDeclare(p):
 	identObj:IdentifierNode = p[2][0]
 	identObj.identType = IdentifierNode.Type.GLOBAL_VARIABLE
 	identObj.typename = TypeNameSpec(p[1][5:-1])
+	p[2].assignType = AssignmentNode.AssignType.GV_INIT
 	p[0] = p[2]
 
 def p_literal(p):
