@@ -14,14 +14,20 @@
 | decl() | спецификатор типа (функции или переменной). Для юнионов используется косая черта. Для перечисления параметров используется точка с запятой. | decl(int) testvar = 3;<br/>decl(int(float|int;bool)) testfunc = {params["_num","_boolval"]};
 | enum() | спецификатор перечисления макроопределений | enum(ENUM_PREFIX_)<br/>#define ENUM_PREFIX_A 1<br/>#define ENUM_PREFIX_B 2
 | namespace() | спецификатор пространств имён. Нужен для сопоставления типов переменных | namespace(module)<br/>module_var1 = 3;<br/>module_var2 = ""; 
+| export | спецификатор экспортируемого члена | export decl(int) vara = 3;
+| const | спецификатор константной переменной | const decl(int)
 
+
+Спецификаторы аннотаций могут быть в любом порядке но рекомендуется следующий:
+> export const decl
 
 ## decl
 
 int - variable
 int[] - static array (onedim)
 int[][] - static array (2 dim)
-Array<int> - tuple
+tuple<int> - tuple
+int|string - union
 
 # Встроенные типы
 
