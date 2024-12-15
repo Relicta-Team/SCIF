@@ -71,43 +71,42 @@ class ASTNode:
 			return diff
 		return 0
 	
-	def __checks_handlecomments(self,codeCtx:CodeContext):
-		pass
+	def __checks_handlecomments(self,diff,codeCtx:CodeContext):
+		if codeCtx.commList and codeCtx.commList[0][0] < self.lineno:
+			# create generator
+			start = self.lineno - diff
+			end = self.lineno
+			stack = []
+			i = start
+			while i < end:
+				if not codeCtx.commList:
+					stack.append("\n")
+					i += 1
+					continue
+				cline,cval = codeCtx.commList[0]
+				if cline == i:
+					codeCtx.commList.pop(0)
+					if cval.startswith("/*"):
+						stack.append(cval)
+						i += cval.count("\n")
+						continue
+					if cval.startswith("//"):
+						stack.append(cval)
+						stack.append("\n")
+						i += 1
+						continue
+				else:
+					stack.append("\n")
+					i += 1
+			return ''.join(stack)
+		return '\n' * diff
 
 	def _getNextLines(self,codeCtx:CodeContext):
 		"""Must be called only once per node"""
 		diff = self._checkLine(codeCtx)
 		if diff > 0:
-			if codeCtx.commList:
-				cline,cval = codeCtx.commList[0]
-				if self.lineno > cline:
-					codeCtx.commList.pop(0)
-					if cval.startswith("/*"):
-						lastIdx = cline+cval.count("\n") 
-						stackNL = []
-						offset = self.lineno - diff
-						for i in range(offset,diff+offset):
-							if i < cline: 
-								stackNL.append("\n")
-							if i == cline: 
-								stackNL.append(cval)
-							if i > cline and i <= lastIdx: 
-								stackNL.append("")
-							if i >= lastIdx: 
-								stackNL.append("\n")
-
-						return "".join(stackNL)
-					
-					if cval.startswith("//"):
-						if diff < 2: 
-							raise Exception(f"Cannot emplace line comment at {self.lineno}: {cval}")
-						start = self.lineno - diff
-						leftCnt = cline-start
-						rightCnt = diff - leftCnt
-						return ('\n' * leftCnt) + cval + ('\n' * rightCnt)
-					
-				# unsuported comment type or not a comment
-				return '\n' * diff
+			if codeCtx.commList and codeCtx.commList[0][0] < self.lineno:
+				return self.__checks_handlecomments(diff,codeCtx)
 			else:
 				return '\n' * diff
 		else:

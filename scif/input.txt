@@ -14,13 +14,18 @@ namespace(test,gvar_)
 
 if 
 
-(true ) then {/*
-term*/a = 1; 
+(true ) then {a = 1; /*
+term
+
+*/
 	 
 	 
 	 b = 2};
 // lval_test; 1;
+//1
+//2
 decl(int) 
+//3
 gvar_int 
 = 
 1 ;
