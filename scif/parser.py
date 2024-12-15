@@ -112,10 +112,12 @@ def p_forStructure(p):
 	'''forStructure : FOR STRING FROM expression TO expression DO codeBlock
 					| FOR STRING FROM expression TO expression STEP expression DO codeBlock
 	'''
+	forVar = LiteralNode(p.slice[2].lineno, p[2])
+	forVar.typename = TypeNameSpec('int')
 	if len(p) == 9:
-		p[0] = ForNode(p.slice[1].lineno, p[2], p[4], p[6], p[8])
+		p[0] = ForNode(p.slice[1].lineno, forVar, p[4], p[6], p[8])
 	else:
-		p[0] = ForNode(p.slice[1].lineno, p[2], p[4], p[6], p[8], p[10])
+		p[0] = ForNode(p.slice[1].lineno, forVar, p[4], p[6], p[8], p[10])
 
 def p_foreachStructure(p):
 	'''foreachStructure : codeBlock FOREACH statement
