@@ -71,18 +71,22 @@ class ASTNode:
 			return diff
 		return 0
 	
+	def __checks_handlecomments(self,codeCtx:CodeContext):
+		pass
+
 	def _getNextLines(self,codeCtx:CodeContext):
 		"""Must be called only once per node"""
 		diff = self._checkLine(codeCtx)
 		if diff > 0:
 			if codeCtx.commList:
 				cline,cval = codeCtx.commList[0]
-				if self.lineno >= cline:
+				if self.lineno > cline:
 					codeCtx.commList.pop(0)
 					if cval.startswith("/*"):
 						lastIdx = cline+cval.count("\n") 
 						stackNL = []
-						for i in range(1,diff+1):
+						offset = self.lineno - diff
+						for i in range(offset,diff+offset):
 							if i < cline: 
 								stackNL.append("\n")
 							if i == cline: 
@@ -96,12 +100,11 @@ class ASTNode:
 					
 					if cval.startswith("//"):
 						if diff < 2: 
-							raise Exception(f"Cannot emplace line comment at {self.lineno}: {cline}")
-						origStrNL = '\n' * diff
-						return origStrNL[:-1] + cval + '\n'
-
-						# start = origStrNL[:-1]
-						#return '\n' * (diff-1) + cval
+							raise Exception(f"Cannot emplace line comment at {self.lineno}: {cval}")
+						start = self.lineno - diff
+						leftCnt = cline-start
+						rightCnt = diff - leftCnt
+						return ('\n' * leftCnt) + cval + ('\n' * rightCnt)
 					
 				# unsuported comment type or not a comment
 				return '\n' * diff
