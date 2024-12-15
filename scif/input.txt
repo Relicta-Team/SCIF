@@ -1,6 +1,11 @@
 
 namespace(test,gvar_)
 
+
+
+
+
+
 /*
 	This is a multiline comment
 	Secondline
@@ -9,7 +14,8 @@ namespace(test,gvar_)
 
 if 
 
-(true) then {a = 1; 
+(true ) then {/*
+term*/a = 1; 
 	 
 	 
 	 b = 2};
@@ -28,4 +34,8 @@ decl(bool) gvar_bool = false
 while{true} do {};
 for "_i" from 1 to 100 do {};
 for "_i" from 1 to 5 step 1 do {};
-{} foreach undefvar_aslist;
+{
+	a = 5
+} foreach undefvar_aslist;
+
+nonvar = 987.3;

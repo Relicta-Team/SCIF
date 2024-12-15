@@ -89,7 +89,7 @@ def t_PP_COMMENTLINE(t):
 	r'((//.*?)(\n|$))'
 	regx = re.match(r'((//.*?)(\n|$))',t.value)
 	t.value = regx.group(2)
-	t.lexer.commentsDict[t.lexpos] = t.value
+	t.lexer.commentsDict[t.lineno] = t.value
 	if regx.group(3) == '\n':
 		t.lexer.lineno += 1
 	#return t
@@ -97,7 +97,7 @@ def t_PP_COMMENTBLOCK(t):
 	#r'\/\*.*\*\/'
 	r'(/\*(.|\n)*?\*/)'
 	ncr = t.value.count("\n")
-	t.lexer.commentsDict[t.lexpos] = t.value
+	t.lexer.commentsDict[t.lineno] = t.value
 	t.lexer.lineno += ncr
 	#return t
 

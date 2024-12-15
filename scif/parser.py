@@ -122,9 +122,10 @@ def p_forStructure(p):
 def p_foreachStructure(p):
 	'''foreachStructure : codeBlock FOREACH statement
 	'''
+	p[3].lineno = p[1].lineno
 	p[0] = ForeachNode(
 		#p.slice[1].lineno
-		p[3].lineno
+		p[1].lineno
 		, p[3], p[1])
 
 def p_assignment(p):

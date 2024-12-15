@@ -7,6 +7,8 @@ class CodeContext:
 	def __init__(self,nsDict,commDict):
 		self.nsDict = nsDict
 		self.commDict = commDict
+		# managed comments list
+		self.commList = list(commDict.items())
 		self.curLine = 1
 
 class ASTNode:
@@ -73,7 +75,38 @@ class ASTNode:
 		"""Must be called only once per node"""
 		diff = self._checkLine(codeCtx)
 		if diff > 0:
-			return '\n' * diff
+			if codeCtx.commList:
+				cline,cval = codeCtx.commList[0]
+				if self.lineno >= cline:
+					codeCtx.commList.pop(0)
+					if cval.startswith("/*"):
+						lastIdx = cline+cval.count("\n") 
+						stackNL = []
+						for i in range(1,diff+1):
+							if i < cline: 
+								stackNL.append("\n")
+							if i == cline: 
+								stackNL.append(cval)
+							if i > cline and i <= lastIdx: 
+								stackNL.append("")
+							if i >= lastIdx: 
+								stackNL.append("\n")
+
+						return "".join(stackNL)
+					
+					if cval.startswith("//"):
+						if diff < 2: 
+							raise Exception(f"Cannot emplace line comment at {self.lineno}: {cline}")
+						origStrNL = '\n' * diff
+						return origStrNL[:-1] + cval + '\n'
+
+						# start = origStrNL[:-1]
+						#return '\n' * (diff-1) + cval
+					
+				# unsuported comment type or not a comment
+				return '\n' * diff
+			else:
+				return '\n' * diff
 		else:
 			return ""
 
