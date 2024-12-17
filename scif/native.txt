@@ -32,14 +32,14 @@ t:HASHMAP
 t:TASK
 t:DIARY_RECORD
 t:LOCATION
-b:CONTROL lnbsetcurselrow SCALAR | widget:listbox.setCurSelRow
+b:CONTROL lnbsetcurselrow SCALAR | widget:listnbox.setCurSelRow
 b:CONTROL removemenuitem SCALAR | widget:menu.removeItem
 b:CONTROL removemenuitem STRING | widget:menu.removeItem
 b:OBJECT currentzeroing ARRAY
 b:OBJECT curatorcoef STRING
 b:OBJECT getreldir ARRAY,OBJECT | mesh:mesh.getRelDir
 b:STRING setmarkerpolyline ARRAY
-b:CONTROL ctrlsetfontheighth6 SCALAR | widget:html
+b:CONTROL ctrlsetfontheighth6 SCALAR | widget:html.setFontH6
 b:OBJECT setturretlimits ARRAY
 b:ARRAY inareaarrayindexes OBJECT | array:@inAreaArrayIndexes
 b:ARRAY inareaarrayindexes STRING | array:@inAreaArrayIndexes
