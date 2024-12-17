@@ -33,8 +33,8 @@ t:TASK
 t:DIARY_RECORD
 t:LOCATION
 b:CONTROL lnbsetcurselrow SCALAR | widget:listnbox.setCurSelRow
-b:CONTROL removemenuitem SCALAR | widget:menu.removeItem
-b:CONTROL removemenuitem STRING | widget:menu.removeItem
+b:CONTROL removemenuitem SCALAR
+b:CONTROL removemenuitem STRING
 b:OBJECT currentzeroing ARRAY
 b:OBJECT curatorcoef STRING
 b:OBJECT getreldir ARRAY,OBJECT | mesh:mesh.getRelDir
@@ -713,7 +713,7 @@ b:OBJECT getunittrait STRING
 b:OBJECT hcremovegroup GROUP
 b:ARRAY arrayintersect ARRAY | array:array.intersect
 b:CONTROL lbsetpictureright ARRAY | widget:listbox.setPictureRight
-b:DISPLAY setvariable ARRAY | display:display.setVar
+b:DISPLAY setvariable ARRAY | widget:display.setVar
 b:CONTROL setvariable ARRAY | widget:widget.setVar
 b:OBJECT setvariable ARRAY | mesh:mesh.setVar
 b:GROUP setvariable ARRAY
@@ -753,7 +753,7 @@ b:CONTROL lbsetpicturerightcolordisabled ARRAY | widget:listbox.setPictureRightC
 b:STRING setmarkerbrush STRING
 b:OBJECT setvelocitytransformation ARRAY | mesh:mesh.setVelocityTransformation
 b:OBJECT enablecollisionwith OBJECT | mesh:mesh.enableCollisionWith
-b:DISPLAY displayremoveeventhandler ARRAY | display:display.removeEventHandler
+b:DISPLAY displayremoveeventhandler ARRAY | widget:display.removeEventHandler
 b:OBJECT addmagazines ARRAY
 b:STRING setmarkertype STRING
 b:GROUP deletegroupwhenempty BOOL
@@ -834,7 +834,7 @@ b:OBJECT hideselection ARRAY | mesh:mesh.setHideSelection
 b:CONTROL lbcolorright SCALAR | widget:listbox.getColorRight
 b:OBJECT setcuratoreditingareatype BOOL
 b:OBJECT confirmsensortarget ARRAY
-b:DISPLAY getvariable ARRAY,STRING | display:display.getVar
+b:DISPLAY getvariable ARRAY,STRING | widget:display.getVar
 b:CONTROL getvariable ARRAY,STRING | widget:widget.getVar
 b:OBJECT getvariable STRING | mesh:mesh.getVar
 b:OBJECT getvariable ARRAY | mesh:mesh.getVar
@@ -872,7 +872,7 @@ b:OBJECT addcuratoraddons ARRAY
 b:OBJECT addbackpackcargo ARRAY
 b:ARRAY join OBJECT,GROUP
 b:ARRAY,OBJECT glanceat ARRAY,OBJECT
-b:DISPLAY displayremovealleventhandlers STRING | display:display.removeAllEventHandlers
+b:DISPLAY displayremovealleventhandlers STRING | widget:display.removeAllEventHandlers
 b:ANY isequalref ANY | engine:@isEqualRef
 b:HASHMAP merge ARRAY,HASHMAP | hashmap:hashmap.merge
 b:TASK settaskstate STRING
@@ -899,7 +899,7 @@ b:SCALAR bezierinterpolation ARRAY | math:@bezierInterpolation
 b:CONTROL inserteditorobject ARRAY
 b:STRING setdynamicsimulationdistancecoef SCALAR
 b:SCALAR fadespeech SCALAR | engine:@fadeSpeech
-b:DISPLAY closedisplay SCALAR | display:display.close
+b:DISPLAY closedisplay SCALAR | widget:display.close
 b:OBJECT setlightuseflare BOOL | mesh:mesh.setLightUseFlare
 b:OBJECT setvelocity ARRAY | mesh:mesh.setVelocity
 b:ANY breakout STRING
@@ -1266,7 +1266,7 @@ b:ARRAY inareaarray OBJECT | engine:@inAreaArray
 b:ARRAY inareaarray STRING
 b:ARRAY inareaarray ARRAY | engine:@inAreaArray
 b:ARRAY inareaarray LOCATION
-b:DISPLAY createdisplay STRING | display:display.createDisplay
+b:DISPLAY createdisplay STRING | widget:display.createDisplay
 b:CONTROL lnbvalue ARRAY | widget:listnbox.getValue
 b:CONTROL tvpicture ARRAY | widget:treeview.getPicture
 b:OBJECT setcuratorcoef ARRAY
@@ -2789,7 +2789,7 @@ u:menusort ARRAY
 u:menusettext ARRAY
 n:sideenemy
 n:safezonex | widget:=safeZoneX
-n:pixelh | widget:@getPixelH
+n:pixelh | widget:=pixelH
 n:slingloadassistantshown
 n:windstr
 n:isinstructorfigureenabled
@@ -2836,7 +2836,7 @@ n:diag_activemissionfsms
 n:sidelogic
 n:estimatedendservertime
 n:hudmovementlevels
-n:controlnull | control:=nullControl
+n:controlnull | widget:=nullControl
 n:opfor
 n:issteamoverlayenabled | engine:=isSteamOverlayEnabled
 n:issaving
