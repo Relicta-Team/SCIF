@@ -26,6 +26,14 @@
 				"program": "${workspaceFolder}/SCIF/parser.py",
 				"cwd": "${workspaceFolder}/SCIF",
 				"console": "integratedTerminal",
+			},
+			{
+				"name": "native debug",
+				"type": "debugpy",
+				"request": "launch",
+				"program": "${workspaceFolder}/SCIF/native_commands.py",
+				"cwd": "${workspaceFolder}/SCIF",
+				"console": "integratedTerminal",
 			}
 		]
 	}
