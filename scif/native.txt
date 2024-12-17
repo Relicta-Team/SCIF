@@ -1483,7 +1483,7 @@ u:unassignvehicle OBJECT
 u:boundingbox OBJECT | mesh:mesh.getBoundingBox
 u:activetitleeffectparams SCALAR
 u:geteventhandlerinfo ARRAY | engine:@getEventHandlerInfo
-u:ppeffectcreate ARRAY | render:postProcessEffectCreate
+u:ppeffectcreate ARRAY | render:@postProcessEffectCreate
 u:set3denmissionattributes ARRAY
 u:movetime OBJECT
 u:waypointspeed ARRAY
@@ -1605,7 +1605,7 @@ u:getwingsorientationrtd OBJECT
 u:isstaminaenabled OBJECT
 u:vectornormalized ARRAY | vector:vec.normalize
 u:unitbackpack OBJECT
-u:finite SCALAR,NaN | math:isFinite
+u:finite SCALAR,NaN | math:@isFinite
 u:lnbtext ARRAY
 u:teamname TEAM_MEMBER
 u:surfaceiswater ARRAY
@@ -2522,7 +2522,7 @@ u:namedproperties OBJECT
 u:isaisteeringcomponentenabled OBJECT
 u:type TASK
 u:type LOCATION
-u:focusedctrl DISPLAY | 
+u:focusedctrl DISPLAY | widget:display.getFocusedWidget
 u:lnbsetpicturecolor ARRAY
 u:visibleposition OBJECT
 u:getpilotcameradirection OBJECT
