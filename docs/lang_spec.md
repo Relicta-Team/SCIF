@@ -60,6 +60,11 @@ Other:
 - config - internal config values
 - namespace_storage - missionamespace/
 
+Specific:
+- vector3 - 3d vector
+- vector2 - 2d vector
+- NULL - special null type -> var numOrNull:null|number = 5; numOrNull = null;
+
 # Разбор модулей
 Каждый указанный файл будет разобран если к нему подключен спецификатор языка <lang.hpp>
 
