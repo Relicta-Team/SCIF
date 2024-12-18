@@ -204,7 +204,7 @@ class IfNode(ASTNode):
 		if isinstance(cbEl, CodeBlock) and len(cbEl.children) == 1:
 			cbEl = cbEl.children[0] # one-statement implicit block
 		
-		return f"{nl}if {ifCond.getCode(codeCtx)} {cbIf.getCode(codeCtx)} else {cbEl.getCode(curline)}"
+		return f"{nl}if {ifCond.getCode(codeCtx)} {cbIf.getCode(codeCtx)} else {cbEl.getCode(codeCtx)}"
 
 
 class CodeBlock(ASTNode):
