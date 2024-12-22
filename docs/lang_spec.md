@@ -61,6 +61,7 @@ Other:
 - namespace_storage - missionamespace/
 
 Specific:
+- vector4 - 2d transform
 - vector3 - 3d vector
 - vector2 - 2d vector
 - NULL - special null type -> var numOrNull:null|number = 5; numOrNull = null;
