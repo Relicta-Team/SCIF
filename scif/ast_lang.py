@@ -15,7 +15,19 @@ class CodeContext:
 		
 		self.vars = {}
 		self.scopeStack = []
+
+		self.functionSignatureStack = []
 	
+	def pushFunctionSignature(self,signature):
+		self.functionSignatureStack.append(signature)
+	def popFunctionSignature(self):
+		assert len(self.functionSignatureStack) > 0
+		self.functionSignatureStack.pop()
+
+	def getCurFunctionSignature(self):
+		if len(self.functionSignatureStack) == 0: return None
+		return self.functionSignatureStack[-1]
+
 	def addVar(self,varnode):
 		assert len(self.vars) > 0
 		self.vars[self.scopeStack[-1]][varnode.value] = varnode
@@ -84,6 +96,9 @@ class ASTNode:
 			else:
 				result += f"{child}"
 		return result
+
+	def getCalculatedType(self):
+		return TypeNameSpec("any")
 
 	def get_string_value_repr(self):
 		return self.value
@@ -177,6 +192,9 @@ class ValueNode(ASTNode):
 		super().__init__(nodetype,lineNum, children, value)
 		self.typename:TypeNameSpec = TypeNameSpec('any')
 
+	def getCalculatedType(self):
+		return self.typename
+
 class LiteralNode(ValueNode):
 	"""Literal value (int,string etc...)"""
 	def __init__(self, lineNum, value):
@@ -267,14 +285,14 @@ class AssignmentNode(ASTNode):
 		ident = self.children[0]
 		rval = self.children[1]
 
-		# if isinstance(rval, LiteralNode):
-		# 	ident.typename = rval.typename
-		# ident.identType = IdentifierNode.Type.GLOBAL_VARIABLE
-		# self.assignType = AssignmentNode.AssignType.GV_INIT
+		#if isinstance(rval, LiteralNode):
+		ident.typename = rval.getCalculatedType()
 		
 		if self.assignType == AssignmentNode.AssignType.LV_INIT:
 			codeCtx.addVar(ident)
 			ident.formatter = "let {value}"
+			#if ident.typename != "any":
+			ident.formatter += f': {ident.typename}'
 		return f"{ident.getCode(codeCtx)} {self._getNextLines(codeCtx)}= {rval.getCode(codeCtx)}"
 
 
@@ -301,6 +319,12 @@ class IfNode(ASTNode):
 		
 		return f"{nl}if {ifCond.getCode(codeCtx)} {cbIf.getCode(codeCtx)} else {cbEl.getCode(codeCtx)}"
 
+class ExitWithNode(ASTNode):
+	def __init__(self, lineNum, condition,exit):
+		super().__init__('ExitWith', lineNum, children=[condition,exit])
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}if {self.children[0].getCode(codeCtx)} {self.children[1].getCode(codeCtx)}"
 
 class CodeBlock(ASTNode):
 	"""children is a list of statements"""
@@ -309,9 +333,20 @@ class CodeBlock(ASTNode):
 
 	def getCode(self,codeCtx:CodeContext):
 		codes = self._getNextLines(codeCtx) +"{"
-		for x in self.children:
+		curFunc = codeCtx.getCurFunctionSignature()
+		countStates = len(self.children)
+		diffLines = 0
+		if countStates > 2:
+			diffLines = self.children[-1].lineno - self.children[0].lineno
+		for i, x in enumerate(self.children):
+			# if i == countStates - 1 \
+			# 	and curFunc is not None  \
+			# 	and isinstance(x,ValueNode) \
+			# 	and curFunc.getReturnType() != "void":
+			# 	codes += x._getNextLines(codeCtx)
+			# 	codes += f"return "
 			codes += x.getCode(codeCtx) + ";"
-		return codes + "}"
+		return codes + ("}" if diffLines == 0 else "\n}")
 
 class GroupedExpression(ASTNode):
 	def __init__(self, lineNum, expression):
@@ -375,6 +410,7 @@ class FunctionDeclaration(ASTNode):
 		
 		codeCtx.pushScope(self.children[1])
 		
+		#params preparing
 		for i,pname in enumerate(pnames.children):
 			defVal = None
 			if isinstance(pname,ArrayConstant):
@@ -387,17 +423,20 @@ class FunctionDeclaration(ASTNode):
 			if pname.typename != "string": raise Exception(f"Function params must be strings at line: {self.lineno}")
 			if not pname.value.startswith("_"): raise Exception(f"Function params must start with _ at line: {self.lineno}")
 			curType = ptypes[i]
-			curParam = [pname.value[1:],':',curType]
+			curParam = [pname.value[1:],': ',curType]
 			if defVal is not None:
 				curParam.append(' = ')
 				curParam.append(defVal)
 			pbuilder.append(''.join(curParam))
 			
 			codeCtx.addVar(IdentifierNode(self.children[0].lineno,pname.value))
-			
-
-		funcCode = f"{baseNL}function {self.children[0].getCode(codeCtx)}({', '.join(pbuilder)}) {self.children[1].getCode(codeCtx)}"
+		
+		functionSignature = self.children[0].typename
+		freturn = functionSignature.getReturnType()
+		codeCtx.pushFunctionSignature(functionSignature)
+		funcCode = f"{baseNL}function {self.children[0].getCode(codeCtx)}({', '.join(pbuilder)}): {freturn} {self.children[1].getCode(codeCtx)}"
 		codeCtx.popScope()
+		codeCtx.popFunctionSignature()
 		assert codeCtx.scopeIsEmpty()
 		
 		return funcCode

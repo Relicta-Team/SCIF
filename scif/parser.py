@@ -63,10 +63,14 @@ def p_ifStructure(p):
 	# 					 | forStructure
 	# 					 | foreachStructure 
 	'''ifStructure : IF expression THEN codeBlock
+	               | IF expression EXITWITH codeBlock	
 	               | IF expression THEN codeBlock ELSE codeBlock
 	'''
 	if len(p) == 5:
-		p[0] = IfNode(p.slice[1].lineno, p[2], p[4])
+		if p[3].lower() == "exitwith":
+			p[0] = ExitWithNode(p.slice[1].lineno, p[2], p[4])
+		else:
+			p[0] = IfNode(p.slice[1].lineno, p[2], p[4])
 	else:
 		p[0] = IfNode(p.slice[1].lineno, p[2], p[4], p[6])
 

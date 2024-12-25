@@ -12,9 +12,9 @@ namespace(test,gvar_)
 	//other comment
 */
 
-decl(void(int;float)) testfunc = {
+decl(int(int;float)) testfunc = {
 	params ["_a",["_b",5]];
-
+	if (false) exitwith {_b = 1; _a};
 	_a = 5;
 	private _e = 4;
 	_e = _b;
