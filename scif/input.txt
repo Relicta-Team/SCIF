@@ -12,35 +12,44 @@ namespace(test,gvar_)
 	//other comment
 */
 
-if 
+decl(void(int;float)) testfunc = {
+	params ["_a",["_b",5]];
 
-(true ) then {a = 1; /*
-term
+	_a = 5;
+	private _e = 4;
+	_e = _b;
+	_e
+};
 
-*/
+// if 
+
+// (true ) then {a = 1; /*
+// term
+
+// */
 	 
 	 
-	 b = 2};
-// lval_test; 1;
-//1
-//2
-decl(int) 
-//3
-gvar_int 
-= 
-1 ;
- gvar_float = 24	;
-decl(string) gvar_str = "hello world"
-;
-decl(bool) gvar_bool = false
+// 	 b = 2};
+// // lval_test; 1;
+// //1
+// //2
+// decl(int) 
+// //3
+// gvar_int 
+// = 
+// 1 ;
+//  gvar_float = 24	;
+// decl(string) gvar_str = "hello world"
+// ;
+// decl(bool) gvar_bool = false
 
-;
+// ;
 
-while{true} do {};
-for "_i" from 1 to 100 do {};
-for "_i" from 1 to 5 step 1 do {};
-{
-	a = 5
-} foreach undefvar_aslist;
+// while{true} do {};
+// for "_i" from 1 to 100 do {};
+// for "_i" from 1 to 5 step 1 do {};
+// {
+// 	a = 5
+// } foreach undefvar_aslist;
 
-nonvar = 987.3;
+// nonvar = 987.3;

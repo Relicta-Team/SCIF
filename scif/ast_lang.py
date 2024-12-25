@@ -11,6 +11,34 @@ class CodeContext:
 		self.commList = list(commDict.items())
 		self.curLine = 1
 
+		self.ignoreNextLines = False
+		
+		self.vars = {}
+		self.scopeStack = []
+	
+	def addVar(self,varnode):
+		assert len(self.vars) > 0
+		self.vars[self.scopeStack[-1]][varnode.value] = varnode
+
+	def pushScope(self,scopeNode):
+		self.scopeStack.append(scopeNode)
+		self.vars[scopeNode] = {}
+	
+	def popScope(self):
+		assert len(self.scopeStack) > 0
+		curScope = self.scopeStack.pop()
+		self.vars.pop(curScope)
+
+	def scopeIsEmpty(self):
+		return len(self.scopeStack) == 0
+
+	def getVarByName(self,name):
+		for scopeName,vars in reversed(self.vars.items()):
+			if name in vars:
+				return vars[name]
+		return None
+
+
 class ASTNode:
 	def __init__(self, nodetype, lineNum, children=None, value=None):
 		self.nodetype = nodetype
@@ -102,6 +130,8 @@ class ASTNode:
 		return '\n' * diff
 
 	def _getNextLines(self,codeCtx:CodeContext):
+		if codeCtx.ignoreNextLines: return ""
+
 		"""Must be called only once per node"""
 		diff = self._checkLine(codeCtx)
 		if diff > 0:
@@ -112,6 +142,35 @@ class ASTNode:
 		else:
 			return ""
 
+	def getFirstInside(self,codeCtx:CodeContext,optPredicate=None,deleteOnFound=False):
+		if optPredicate is None: return None
+		for t in tuple(self.children):
+			if optPredicate(t):
+				if deleteOnFound: self.children.remove(t)
+				return t
+			else:
+				cx = t.getFirstInside(codeCtx,optPredicate,deleteOnFound)
+				if cx is not None: return cx
+		return None
+	
+	def getAllInside(self,codeCtx:CodeContext,optPredicate=None,deleteOnFound=False):
+		if optPredicate is None: return []
+		result = []
+		for t in tuple(self.children):
+			if optPredicate(t):
+				result.append(t)
+				if deleteOnFound: self.children.remove(t)
+			else:
+				result.extend(t.getAllInside(codeCtx,optPredicate))
+		return result
+	
+	def removeNode(self,codeCtx:CodeContext,refNode):
+		for t in tuple(self.children):
+			if t == refNode:
+				self.children.remove(t)
+			else:
+				t.removeNode(codeCtx,refNode)
+		return
 class ValueNode(ASTNode):
 	"""RValue node abstract"""
 	def __init__(self, nodetype, lineNum, children=None, value=None):
@@ -136,6 +195,25 @@ class TypeNameSpec:
 
 	def __repr__(self):
 		return self.stringRepr
+	
+	def __eq__(self, value):
+		if value is None: return False
+		if isinstance(value, TypeNameSpec):
+			value = value.stringRepr
+		return self.stringRepr == value
+	def __ne__(self, value):
+		return not self.__eq__(value)
+	
+	def getFunctionSignatureParams(self):
+		firstParen = self.stringRepr.find("(")
+		if firstParen < 0: raise Exception("Invalid typename: " + self.stringRepr)
+		paramsSign = self.stringRepr[firstParen+1:-1].split(";")
+		return paramsSign
+
+	def getReturnType(self):
+		firstParen = self.stringRepr.find("(")
+		if firstParen < 0: raise Exception("Invalid typename: " + self.stringRepr)
+		return self.stringRepr[:firstParen]
 
 class IdentifierNode(ValueNode):
 	"""Identifier container (local,global,func)"""
@@ -150,6 +228,7 @@ class IdentifierNode(ValueNode):
 	def __init__(self, lineNum, name):
 		super().__init__('Ident', lineNum, value=name)
 		self.identType = IdentifierNode.Type.UNKNOWN
+		self.formatter = "{value}"
 		if name.startswith('_'):
 			self.identType = IdentifierNode.Type.LOCAL_VARIABLE
 		else:
@@ -159,7 +238,15 @@ class IdentifierNode(ValueNode):
 		return f"[{self.identType.name}] {self.typename} {super().get_string_value_repr()}"
 	
 	def getCode(self,codeCtx:CodeContext):
-		return self._getNextLines(codeCtx) + self.value
+		val = self.value
+		if self.identType == IdentifierNode.Type.LOCAL_VARIABLE:
+			varDecl = codeCtx.getVarByName(val)
+			if varDecl is None:
+				raise Exception(f"Unknown variable: {val} at line: {self.lineno}")
+		if self.identType == IdentifierNode.Type.LOCAL_VARIABLE and val.startswith("_"):
+			val = val[1:]
+		val = self.formatter.format(value=val)
+		return self._getNextLines(codeCtx) + val
 
 class AssignmentNode(ASTNode):
 	def __init__(self, lineNum, target, expression):
@@ -179,7 +266,15 @@ class AssignmentNode(ASTNode):
 	def getCode(self,codeCtx:CodeContext):
 		ident = self.children[0]
 		rval = self.children[1]
+
+		# if isinstance(rval, LiteralNode):
+		# 	ident.typename = rval.typename
+		# ident.identType = IdentifierNode.Type.GLOBAL_VARIABLE
+		# self.assignType = AssignmentNode.AssignType.GV_INIT
 		
+		if self.assignType == AssignmentNode.AssignType.LV_INIT:
+			codeCtx.addVar(ident)
+			ident.formatter = "let {value}"
 		return f"{ident.getCode(codeCtx)} {self._getNextLines(codeCtx)}= {rval.getCode(codeCtx)}"
 
 
@@ -260,3 +355,66 @@ class ForeachNode(ASTNode):
 
 	def getCode(self,codeCtx:CodeContext):
 		return f"{self._getNextLines(codeCtx)}foreach {self.children[0].getCode(codeCtx)} {self.children[1].getCode(codeCtx)}"
+	
+
+class FunctionDeclaration(ASTNode):
+	def __init__(self, lineNum, name, block):
+		super().__init__('FunctionDecl', lineNum, children=[name,block])
+
+	def getCode(self,codeCtx:CodeContext):
+		n = self.getFirstInside(codeCtx,lambda node: node.nodetype == 'Params',True)
+		if n is None: raise Exception(f"Function declaration must have params at line: {self.lineno}")
+		if len(n.children) > 1: raise Exception(f"Function declaration must have only one param at line: {self.lineno}")
+
+		ptypes = self.children[0].typename.getFunctionSignatureParams()
+		baseNL = self._getNextLines(codeCtx)
+		
+		pnames = n.children[0]
+		pbuilder = []
+		if len(ptypes) != len(pnames.children): raise Exception(f"Function param/signature error: p {len(pnames.children)}; s {len(ptypes)} at line: {self.lineno}")
+		
+		codeCtx.pushScope(self.children[1])
+		
+		for i,pname in enumerate(pnames.children):
+			defVal = None
+			if isinstance(pname,ArrayConstant):
+				if len(pname.children) != 2: raise Exception(f"Function decl error: param with default value must be 2-size array; line {self.lineno}")
+				dvalNode =  pname.children[1]
+				codeCtx.ignoreNextLines = True
+				defVal = dvalNode.getCode(codeCtx)
+				codeCtx.ignoreNextLines = False
+				pname = pname.children[0]
+			if pname.typename != "string": raise Exception(f"Function params must be strings at line: {self.lineno}")
+			if not pname.value.startswith("_"): raise Exception(f"Function params must start with _ at line: {self.lineno}")
+			curType = ptypes[i]
+			curParam = [pname.value[1:],':',curType]
+			if defVal is not None:
+				curParam.append(' = ')
+				curParam.append(defVal)
+			pbuilder.append(''.join(curParam))
+			
+			codeCtx.addVar(IdentifierNode(self.children[0].lineno,pname.value))
+			
+
+		funcCode = f"{baseNL}function {self.children[0].getCode(codeCtx)}({', '.join(pbuilder)}) {self.children[1].getCode(codeCtx)}"
+		codeCtx.popScope()
+		assert codeCtx.scopeIsEmpty()
+		
+		return funcCode
+	
+class ArrayConstant(ASTNode):
+	def __init__(self, lineNum, values):
+		super().__init__('Array', lineNum, children=values)
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"[{','.join([x.getCode(codeCtx) for x in self.children])}]"
+	
+class ParamsDecl(ASTNode):
+	def __init__(self, lineNum, pnames, leftval=None):
+		params = [pnames]
+		if leftval is not None:
+			params.append(leftval)
+		super().__init__('Params', lineNum, children=params)
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"PARAMS({','.join([x.getCode(codeCtx) for x in self.children])})"

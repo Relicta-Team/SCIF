@@ -5,6 +5,7 @@ import requests
 import urllib3
 
 dictNatives = {}
+nativeAssocRefs = {}
 
 def prepareNativeCommands():
 	lines = []
@@ -99,6 +100,7 @@ def prepareNativeCommands():
 						ddat['rval'] = rval
 					if type == 'u':
 						ddat['rval'] = rval
+					nativeAssocRefs[cmdName.lower()] = ddat
 
 			if isStatic:
 				if member in mdlDict:
@@ -112,6 +114,8 @@ def prepareNativeCommands():
 						"nativeName" : cmdName,
 						"cmdType": type,
 					}
+
+					nativeAssocRefs[cmdName.lower()] = mdlDict[member]
 			if isConst:
 				mdlDict[member] = {
 					"type": "const",
@@ -119,6 +123,8 @@ def prepareNativeCommands():
 					"nativeName" : cmdName,
 					"cmdType": type,
 				}
+
+				nativeAssocRefs[cmdName.lower()] = mdlDict[member]
 
 	return dictNatives
 

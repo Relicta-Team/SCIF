@@ -2,6 +2,7 @@ from lexer import lexer,tokens
 import ply.yacc as yacc
 import re
 from visitor import visit_global
+from native_commands import nativeAssocRefs,prepareNativeCommands
 
 
 # https://community.bistudio.com/wiki/Operators
@@ -32,8 +33,30 @@ def p_statement(p):
 
 def p_controlStructuresRValue(p):
 	'''controlStructuresRValue : ifStructure
+							   | paramsDecl	   
 	'''
-	p[0] = p[1]
+	# | expression IDENT expression
+	# | IDENT expression
+	# | IDENT
+	if len(p) == 4:
+		raise Exception("Binary commands not implemented")
+	elif len(p) == 3:
+		raise Exception("Unary commands not implemented")
+		pass #unary cmd
+	elif len(p) == 2 and p.slice[1].type == 'IDENT':
+		raise Exception("Nular commands not implemented")
+		pass #nullar cmd
+	else:
+		p[0] = p[1]
+
+def p_paramsDecl(p):
+	'''paramsDecl : PARAMS arrayConstant
+				  | expression PARAMS arrayConstant
+	'''
+	if len(p) == 3:
+		p[0] = ParamsDecl(p.slice[1].lineno, p[2])
+	else:
+		p[0] = ParamsDecl(p.slice[2].lineno, p[3], p[1])
 
 def p_ifStructure(p):
 	# | whileStructure
@@ -86,6 +109,7 @@ def p_expression(p):
 				  | IDENT
 				  | OPEN_PAREN expression CLOSE_PAREN
 				  | controlStructuresRValue
+				  | arrayConstant
 	'''
 	if len(p) == 4:
 		p[0] = GroupedExpression(p.slice[1].lineno, p[2])
@@ -95,6 +119,23 @@ def p_expression(p):
 		else:  # Если литерал
 			p[0] = p[1]
 
+def p_arrayConstant(p):
+	'''arrayConstant : OPEN_BRACKET arrayValueList CLOSE_BRACKET
+					 | OPEN_BRACKET CLOSE_BRACKET
+	'''
+	if len(p) == 4:
+		p[0] = ArrayConstant(p.slice[1].lineno, p[2])
+	else:
+		p[0] = ArrayConstant(p.slice[1].lineno, [])
+
+def p_arrayValueList(p):
+	'''arrayValueList : expression
+					  | expression ',' arrayValueList
+	'''
+	if len(p) == 2:
+		p[0] = [p[1]]
+	else:
+		p[0] = [p[1]] + p[3]
 
 def p_controlStructuresLValue(p):
 	'''controlStructuresLValue : whileStructure
@@ -120,7 +161,7 @@ def p_forStructure(p):
 		p[0] = ForNode(p.slice[1].lineno, forVar, p[4], p[6], p[8], p[10])
 
 def p_foreachStructure(p):
-	'''foreachStructure : codeBlock FOREACH statement
+	'''foreachStructure : codeBlock FOREACH expression
 	'''
 	p[3].lineno = p[1].lineno
 	p[0] = ForeachNode(
@@ -130,25 +171,47 @@ def p_foreachStructure(p):
 
 def p_assignment(p):
 	'''assignment : IDENT '=' expression
+				  | LVDECLARE IDENT '=' expression
 	'''
-	target = IdentifierNode(p.slice[1].lineno, p[1])
-	exp = p[3]
-	p[0] = AssignmentNode(p.slice[2].lineno, target, exp)
-	if isCompileContext:
-		if isinstance(exp, LiteralNode):
-			target.typename = exp.typename
-		target.identType = IdentifierNode.Type.GLOBAL_VARIABLE
-		p[0].assignType = AssignmentNode.AssignType.GV_INIT
+	if len(p) == 4:
+		target = IdentifierNode(p.slice[1].lineno, p[1])
+		exp = p[3]
+		p[0] = AssignmentNode(p.slice[2].lineno, target, exp)
+	else:
+		target = IdentifierNode(p.slice[2].lineno, p[2])
+		target.identType = IdentifierNode.Type.LOCAL_VARIABLE
+		exp = p[4]
+		p[0] = AssignmentNode(p.slice[3].lineno, target, exp)
+		p[0].assignType = AssignmentNode.AssignType.LV_INIT
+	# if isCompileContext:
+	# 	if isinstance(exp, LiteralNode):
+	# 		target.typename = exp.typename
+	# 	target.identType = IdentifierNode.Type.GLOBAL_VARIABLE
+	# 	p[0].assignType = AssignmentNode.AssignType.GV_INIT
 
 
 def p_moduleMemberDeclare(p):
-	'''moduleMemberDeclare : DECLSPEC assignment
+	'''moduleMemberDeclare : moduleVarDeclare
+						   | moduleFuncDeclare
+	'''
+	p[0] = p[1]
+
+def p_moduleVarDeclare(p):
+	'''moduleVarDeclare : DECLSPEC assignment
 	'''
 	identObj:IdentifierNode = p[2][0]
 	identObj.identType = IdentifierNode.Type.GLOBAL_VARIABLE
 	identObj.typename = TypeNameSpec(p[1][5:-1])
 	p[2].assignType = AssignmentNode.AssignType.GV_INIT
 	p[0] = p[2]
+
+def p_moduleFuncDeclare(p):
+	'''moduleFuncDeclare : DECLSPEC IDENT '=' codeBlock
+	'''
+	identName = IdentifierNode(p.slice[2].lineno, p[2])
+	identName.identType = IdentifierNode.Type.GLOBAL_VARIABLE
+	identName.typename = TypeNameSpec(p[1][5:-1])
+	p[0] = FunctionDeclaration(p.slice[2].lineno, identName, p[4])
 
 def p_literal(p):
 	'''literal : NUMBER
@@ -196,7 +259,8 @@ try:
 	#import logging
 	#logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 	parser = yacc.yacc(debug=True, 
-					#debuglog=logging.getLogger()
+					#debuglog=logging.getLogger(),
+					
 					)
 except Exception as e:
 	print(f"PARSER GENERAION ERROR: {e}")
@@ -208,6 +272,8 @@ def generateAST(input):
 
 if __name__ == '__main__':
 	import os
+	
+	# prepareNativeCommands()
 	with open(os.path.dirname(__file__) + '\\input.txt') as f:
 		input = f.read()
 	try:
@@ -219,4 +285,4 @@ if __name__ == '__main__':
 		print( '\n'.join( [f'L{ind+1}: {lin}' for ind, lin in enumerate(astdata.getCode(ctx).split("\n"))] ) )
 		#visit_global(astdata,debugPrint=True)
 	except Exception as e:
-		print(e)
+		print(e.with_traceback(e.__traceback__))

@@ -23,7 +23,8 @@ reserved = {
 	'in': 'IN',
 	'break': 'BREAK',
 	'continue': 'CONTINUE',
-	"private": "LVDECLARE"
+	"private": "LVDECLARE",
+	"params": "PARAMS",
 }
 
 langSpec = (
@@ -82,6 +83,7 @@ literals = '();={}:!,[]'
 
 states = (
 	('string', 'inclusive'),
+	('declspec', 'inclusive'),
 )
 
 t_ignore = ' \t\r'
@@ -108,12 +110,29 @@ def t_PP_DIRECTIVE(t):
 
 
 def t_NAMESPACESPEC(t):
-	r'namespace\([a-zA-Z_][a-zA-Z0-9_]*\s*\,\s*[a-zA-Z_][a-zA-Z0-9_]*\)'
+	r'namespace\([a-zA-Z_][a-zA-Z0-9_]*\s*\,\s*[a-zA-Z_][a-zA-Z0-9_;]*\)'
 	return t
 
 def t_DECLSPEC(t):
-	r'decl\([^\)]*\)'
-	return t
+	r'decl\('
+	t.lexer.push_state('declspec')
+	t.lexer.declspec_start = t.lexpos
+	#return t
+
+def t_declspec_oparen(t):
+	r'\('
+	t.lexer.push_state('declspec')
+def t_declspec_chars(t):
+	r'[^\(\)]'
+
+def t_declspec_end(t):
+	r'[\)]'
+	
+	t.lexer.pop_state()
+	if t.lexer.current_state() == 'INITIAL':
+		t.type = 'DECLSPEC'
+		t.value = t.lexer.lexdata[t.lexer.declspec_start:t.lexpos+1]
+		return t
 
 def t_ENUMSPEC(t):
 	r'enum\([a-zA-Z_][a-zA-Z0-9_]*\s*\,\s*[a-zA-Z_][a-zA-Z0-9_]*\)'
@@ -147,7 +166,7 @@ def t_BOOLEAN(t):
 
 def t_IDENT(t):
 	r'[a-zA-Z_][a-zA-Z0-9_]*'
-	t.type = reserved.get(t.value, 'IDENT')
+	t.type = reserved.get(t.value.lower(), 'IDENT')
 	return t
 
 def t_NUMBER(t):
