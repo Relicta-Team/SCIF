@@ -5,7 +5,8 @@
 
 # Нерешенные вопросы
 
-- [ ] Нужны ли на данном этапе пространства имён
+- [x] Нужны ли на данном этапе пространства имён
+- [x] Как будет решаться проблема с exitWith в родном скоупе функции.
 - [ ] Как будут резолвиться внешние типы
 - [ ] Как должны решаться изменения переменных чужих модулей в использующих модулях
 
@@ -20,7 +21,72 @@
 
 ## Решение
 
-> да или нет. описать причины выбранного решения
+> Пространства имен нужны для экспорта переменных в typescript. Будут использованы.
+
+# exitWith в root-скоупе функции
+
+Логика команды подразумевает выход из скоупа и возврат значения в блоке кода правого аргумента.
+В js/ts есть маркированные скоупы:
+```js
+let num = 0; //example var
+let scp = null; //out value
+if (true) list: { //begin scope
+	num ++;
+	num ++;
+	scp = num; //store scope return value
+	break list; //emulate exitwith logic
+	num ++; //never called
+}
+
+scp //returns 2
+```
+Но данное решение выходит с маркированного скоупа.
+
+```sqf
+systemChat "start";
+private _condition = true;
+if (_condition) then {
+	if (true) exitWith {
+		systemChat "exiting if _condition scope";
+	};
+	systemChat "never shown";
+};
+systemChat "exiting #1 worked";
+if (true) exitWith {
+	systemChat "exiting the main scope = leaving the whole script";
+};
+systemChat "never shown - the script has already ended";
+```
+
+Сконверсим в:
+
+```js
+let condition = true;
+root1: if (condition) {
+	if (true) {
+		console.log("exiting");
+		break root1;
+	};
+	console.log("never shown 1");
+};
+console.log("next...");
+if (true) {
+	console.log("exiting the main scope");
+	return;
+};
+console.log("never shown 2");
+```
+Правила для реализации должны быть следующие:
+1. Если блок стейта в рут скоупе - выход осуществляется с помощью return.
+2. Если блок стейта во вложенных скоупах то, макрируется родительский и выход осуществляется через break.
+3. Если блок стейта в оригинальном языке возвращает значение в родительский скоуп то при return мы отдаем его, а при break мы создаем временную переменную для сохранения значения.
+
+Стоит обратить внимание, что если мы находимся вне тела функции то return невозможен.
+Но так как в модулях весь код будет добавлен в функцию инициализации то проблем с этим не возникнет.
+
+## Решение
+
+> Используется процедурное определение типа скоупа и выбор соответствующего способа преобразования выражения (return\labeled break)
 
 # Изменение экспортируемых переменных
 
