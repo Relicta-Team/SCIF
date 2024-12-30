@@ -309,22 +309,35 @@ class IfNode(ASTNode):
 
 		ifCond = self.children[0]
 		cbIf = self.children[1]
-		if isinstance(cbIf, CodeBlock) and len(cbIf.children) == 1:
+		if self._isSingleStatement(cbIf):
 			cbIf = cbIf.children[0] # one-statement implicit block
 		if len(self.children) == 2:
 			return f"{nl}if {ifCond.getCode(codeCtx)} {cbIf.getCode(codeCtx)}"
 		cbEl = self.children[2]
-		if isinstance(cbEl, CodeBlock) and len(cbEl.children) == 1:
+		if self._isSingleStatement(cbEl):
 			cbEl = cbEl.children[0] # one-statement implicit block
 		
 		return f"{nl}if {ifCond.getCode(codeCtx)} {cbIf.getCode(codeCtx)} else {cbEl.getCode(codeCtx)}"
 
+	def _isSingleStatement(self,block):
+		return isinstance(block,CodeBlock) and \
+			len(block.children) == 1 and \
+			(
+				not isinstance(block.children[0],IfNode) and 
+				not isinstance(block.children[0],ExitWithNode)
+			)
+
 class ExitWithNode(ASTNode):
 	def __init__(self, lineNum, condition,exit):
 		super().__init__('ExitWith', lineNum, children=[condition,exit])
+		self.markExitWith = None
+
+	def isMarkedExitWith(self):
+		return self.markExitWith
 
 	def getCode(self,codeCtx:CodeContext):
-		return f"{self._getNextLines(codeCtx)}if {self.children[0].getCode(codeCtx)} {self.children[1].getCode(codeCtx)}"
+		prefix = f'{self.markExitWith}: ' if self.isMarkedExitWith() else ''
+		return f"{self._getNextLines(codeCtx)}{prefix}if {self.children[0].getCode(codeCtx)} {self.children[1].getCode(codeCtx)}"
 
 class CodeBlock(ASTNode):
 	"""children is a list of statements"""
@@ -434,6 +447,7 @@ class FunctionDeclaration(ASTNode):
 		functionSignature = self.children[0].typename
 		freturn = functionSignature.getReturnType()
 		codeCtx.pushFunctionSignature(functionSignature)
+		self.prepBody(codeCtx)
 		funcCode = f"{baseNL}function {self.children[0].getCode(codeCtx)}({', '.join(pbuilder)}): {freturn} {self.children[1].getCode(codeCtx)}"
 		codeCtx.popScope()
 		codeCtx.popFunctionSignature()
@@ -441,6 +455,44 @@ class FunctionDeclaration(ASTNode):
 		
 		return funcCode
 	
+	def prepBody(self,codeCtx:CodeContext):
+		assert len(self.children) > 1
+		rootBlock:CodeBlock = self.children[1]
+		def __visit(node:CodeBlock,scopeLevel:int=0):
+			lastIdx = len(node.children)-1
+			for i,x in enumerate(node.children):
+				if isinstance(x,ExitWithNode):
+					if scopeLevel > 0:
+						x.markExitWith = f'label_{scopeLevel}'
+					__visit(x.children[1],scopeLevel+1)
+				if isinstance(x,IfNode):
+					for cbInternal in x.children:
+						if isinstance(cbInternal,CodeBlock):
+							__visit(cbInternal,scopeLevel+1) 
+				if i == lastIdx:
+					if scopeLevel <= 1:
+						if any((isinstance(x,_tSTMT) for _tSTMT in self.__returnableStatements)): 
+							node.children[i] = ReturnStatement(x.lineno,x)
+					else:
+						node.children.append(BreakScope_exitwithStatement(x.lineno,f'label_{scopeLevel-1}'))
+		__visit(rootBlock)
+
+	__returnableStatements = [GroupedExpression,ValueNode]
+
+class ReturnStatement(ASTNode):
+	def __init__(self, lineNum, value):
+		super().__init__('Return', lineNum, children=[value])
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}return {self.children[0].getCode(codeCtx)}"
+
+class BreakScope_exitwithStatement(ASTNode):
+	def __init__(self, lineNum, value):
+		super().__init__('lbl_exit', lineNum, children=[value])
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}break {self.children[0]}"
+
 class ArrayConstant(ASTNode):
 	def __init__(self, lineNum, values):
 		super().__init__('Array', lineNum, children=values)
