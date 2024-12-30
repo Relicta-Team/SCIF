@@ -77,7 +77,7 @@ def p_ifStructure(p):
 def p_codeBlock(p):
 	'''codeBlock : OPEN_BRACE statements CLOSE_BRACE
 	'''
-	p[0] = CodeBlock(p.slice[1].lineno, p[2])
+	p[0] = CodeBlock(p.slice[1].lineno, p[2], p.slice[-1].lineno)
 
 def p_namespaceDeclare(p:yacc.YaccProduction):
 	'''namespaceDeclare : NAMESPACESPEC

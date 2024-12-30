@@ -341,25 +341,17 @@ class ExitWithNode(ASTNode):
 
 class CodeBlock(ASTNode):
 	"""children is a list of statements"""
-	def __init__(self, lineNum, statements):
+	def __init__(self, lineNum, statements, closeLineNum=-1):
 		super().__init__('CodeBlock', lineNum, children=statements)
+		self.lineno_closer = closeLineNum
 
 	def getCode(self,codeCtx:CodeContext):
 		codes = self._getNextLines(codeCtx) +"{"
-		curFunc = codeCtx.getCurFunctionSignature()
-		countStates = len(self.children)
-		diffLines = 0
-		if countStates > 2:
-			diffLines = self.children[-1].lineno - self.children[0].lineno
-		for i, x in enumerate(self.children):
-			# if i == countStates - 1 \
-			# 	and curFunc is not None  \
-			# 	and isinstance(x,ValueNode) \
-			# 	and curFunc.getReturnType() != "void":
-			# 	codes += x._getNextLines(codeCtx)
-			# 	codes += f"return "
+		for x in self.children:
 			codes += x.getCode(codeCtx) + ";"
-		return codes + ("}" if diffLines == 0 else "\n}")
+		diffLines = (self.lineno_closer - self.lineno) - codes.count('\n')
+		codeCtx.curLine += diffLines # делаем смещение чтобы логика некстлайнов не сломалась
+		return codes + ("}" if diffLines <= 0 else ('\n'*diffLines)+"}")
 
 class GroupedExpression(ASTNode):
 	def __init__(self, lineNum, expression):
