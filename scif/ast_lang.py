@@ -146,7 +146,7 @@ class ASTNode:
 
 	def _getNextLines(self,codeCtx:CodeContext):
 		if codeCtx.ignoreNextLines: return ""
-
+		# TODO add ident for all codeblocks here??..
 		"""Must be called only once per node"""
 		diff = self._checkLine(codeCtx)
 		if diff > 0:
