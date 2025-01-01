@@ -26,7 +26,8 @@ class CodeContext:
 
 	def getCurFunctionSignature(self):
 		if len(self.functionSignatureStack) == 0: return None
-		return self.functionSignatureStack[-1]
+		v:TypeNameSpec = self.functionSignatureStack[-1]
+		return v
 
 	def addVar(self,varnode):
 		assert len(self.vars) > 0
@@ -232,6 +233,13 @@ class TypeNameSpec:
 		firstParen = self.stringRepr.find("(")
 		if firstParen < 0: raise Exception("Invalid typename: " + self.stringRepr)
 		return self.stringRepr[:firstParen]
+	
+	def isFunctionType(self):
+		firstParen = self.stringRepr.find("(")
+		return firstParen >= 0
+	def hasFunctionReturnType(self):
+		if not self.isFunctionType(): return False
+		return self.getReturnType() != "void"
 
 class IdentifierNode(ValueNode):
 	"""Identifier container (local,global,func)"""
@@ -463,8 +471,12 @@ class FunctionDeclaration(ASTNode):
 							__visit(cbInternal,scopeLevel+1) 
 				if i == lastIdx:
 					if scopeLevel <= 1:
-						if any((isinstance(x,_tSTMT) for _tSTMT in self.__returnableStatements)): 
-							node.children[i] = ReturnStatement(x.lineno,x)
+						if any((isinstance(x,_tSTMT) for _tSTMT in self.__returnableStatements)):
+							if codeCtx.getCurFunctionSignature().hasFunctionReturnType():
+								node.children[i] = ReturnStatement(x.lineno,x)
+							else:
+								if (scopeLevel > 0):
+									node.children.append(ReturnStatement(x.lineno))
 					else:
 						node.children.append(BreakScope_exitwithStatement(x.lineno,f'label_{scopeLevel-1}'))
 		__visit(rootBlock)
@@ -472,10 +484,11 @@ class FunctionDeclaration(ASTNode):
 	__returnableStatements = [GroupedExpression,ValueNode]
 
 class ReturnStatement(ASTNode):
-	def __init__(self, lineNum, value):
+	def __init__(self, lineNum, value=None):
 		super().__init__('Return', lineNum, children=[value])
 
 	def getCode(self,codeCtx:CodeContext):
+		if self.children[0] is None: return f'{self._getNextLines(codeCtx)}return'
 		return f"{self._getNextLines(codeCtx)}return {self.children[0].getCode(codeCtx)}"
 
 class BreakScope_exitwithStatement(ASTNode):
