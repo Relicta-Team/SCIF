@@ -10,6 +10,7 @@ class CodeContext:
 		# managed comments list
 		self.commList = list(commDict.items())
 		self.curLine = 1
+		self.tabCount = 0
 
 		self.ignoreNextLines = False
 		
@@ -18,6 +19,12 @@ class CodeContext:
 
 		self.functionSignatureStack = []
 	
+	def __enter__(self):
+		self.tabCount += 1
+		return self
+	def __exit__(self, exc_type, exc_value, traceback):
+		self.tabCount -= 1
+
 	def pushFunctionSignature(self,signature):
 		self.functionSignatureStack.append(signature)
 	def popFunctionSignature(self):
@@ -147,14 +154,14 @@ class ASTNode:
 
 	def _getNextLines(self,codeCtx:CodeContext):
 		if codeCtx.ignoreNextLines: return ""
-		# TODO add ident for all codeblocks here??..
-		"""Must be called only once per node"""
+		#! Must be called only once per node
 		diff = self._checkLine(codeCtx)
 		if diff > 0:
 			if codeCtx.commList and codeCtx.commList[0][0] < self.lineno:
-				return self.__checks_handlecomments(diff,codeCtx)
+				return self.__checks_handlecomments(diff,codeCtx) + \
+					(codeCtx.tabCount * '\t')
 			else:
-				return '\n' * diff
+				return ('\n' * diff) + (codeCtx.tabCount * '\t')
 		else:
 			return ""
 
@@ -355,11 +362,12 @@ class CodeBlock(ASTNode):
 
 	def getCode(self,codeCtx:CodeContext):
 		codes = self._getNextLines(codeCtx) +"{"
-		for x in self.children:
-			codes += x.getCode(codeCtx) + ";"
-		diffLines = (self.lineno_closer - self.lineno) - codes.count('\n')
-		codeCtx.curLine += diffLines # делаем смещение чтобы логика некстлайнов не сломалась
-		return codes + ("}" if diffLines <= 0 else ('\n'*diffLines)+"}")
+		with codeCtx:
+			for x in self.children:
+				codes += x.getCode(codeCtx) + ";"
+			diffLines = (self.lineno_closer - self.lineno) - codes.count('\n')
+			codeCtx.curLine += diffLines # делаем смещение чтобы логика некстлайнов не сломалась
+		return codes + ("}" if diffLines <= 0 else ('\n'*diffLines)+(codeCtx.tabCount * '\t')+"}")
 
 class GroupedExpression(ASTNode):
 	def __init__(self, lineNum, expression):
