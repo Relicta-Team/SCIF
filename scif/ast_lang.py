@@ -466,17 +466,17 @@ class FunctionDeclaration(ASTNode):
 	def prepBody(self,codeCtx:CodeContext):
 		assert len(self.children) > 1
 		rootBlock:CodeBlock = self.children[1]
-		def __visit(node:CodeBlock,scopeLevel:int=0):
+		def __visit(node:CodeBlock,scopeLevel:int=0,parentBlock:ASTNode = None):
 			lastIdx = len(node.children)-1
 			for i,x in enumerate(node.children):
 				if isinstance(x,ExitWithNode):
 					if scopeLevel > 0:
 						x.markExitWith = f'label_{scopeLevel}'
-					__visit(x.children[1],scopeLevel+1)
+					__visit(x.children[1],scopeLevel+1,x)
 				if isinstance(x,IfNode):
 					for cbInternal in x.children:
 						if isinstance(cbInternal,CodeBlock):
-							__visit(cbInternal,scopeLevel+1) 
+							__visit(cbInternal,scopeLevel+1,x) 
 				if i == lastIdx:
 					if scopeLevel <= 1:
 						if any((isinstance(x,_tSTMT) for _tSTMT in self.__returnableStatements)):
@@ -486,7 +486,8 @@ class FunctionDeclaration(ASTNode):
 								if (scopeLevel > 0):
 									node.children.append(ReturnStatement(x.lineno))
 					else:
-						node.children.append(BreakScope_exitwithStatement(x.lineno,f'label_{scopeLevel-1}'))
+						if isinstance(parentBlock,ExitWithNode):
+							node.children.append(BreakScope_exitwithStatement(x.lineno,parentBlock.markExitWith))
 		__visit(rootBlock)
 
 	__returnableStatements = [GroupedExpression,ValueNode]

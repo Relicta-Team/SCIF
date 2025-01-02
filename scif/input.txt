@@ -17,6 +17,11 @@ decl(float(int;float)) testfunc = {
 	if (false) exitwith {_b = 1; _a};
 	if (true) then {
 		if (false) exitwith {_b = 4;_b};
+		if (true) then {
+			if (true) then {
+				if (false) exitWith {_b = 123};
+			}
+		}
 	};
 	_a = 5;
 	private _e = 4;
