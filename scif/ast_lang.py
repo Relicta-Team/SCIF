@@ -105,7 +105,7 @@ class ASTNode:
 				result += f"{child}"
 		return result
 
-	def getCalculatedType(self):
+	def getCalculatedType(self,codeCtx:CodeContext):
 		return TypeNameSpec("any")
 
 	def get_string_value_repr(self):
@@ -200,7 +200,7 @@ class ValueNode(ASTNode):
 		super().__init__(nodetype,lineNum, children, value)
 		self.typename:TypeNameSpec = TypeNameSpec('any')
 
-	def getCalculatedType(self):
+	def getCalculatedType(self,codeCtx:CodeContext):
 		return self.typename
 
 class LiteralNode(ValueNode):
@@ -258,6 +258,15 @@ class IdentifierNode(ValueNode):
 		def __repr__(self):
 			return f"ID_T_{self.name}"
 
+	def getCalculatedType(self,codeCtx:CodeContext):
+		if self.identType == IdentifierNode.Type.LOCAL_VARIABLE:
+			varDecl = codeCtx.getVarByName(self.value)
+			if varDecl is not None:
+				return varDecl.typename
+			raise Exception(f"Unknown variable: {self.value} at line: {self.lineno}")
+		else:
+			return super().getCalculatedType(codeCtx)
+
 	def __init__(self, lineNum, name):
 		super().__init__('Ident', lineNum, value=name)
 		self.identType = IdentifierNode.Type.UNKNOWN
@@ -301,7 +310,7 @@ class AssignmentNode(ASTNode):
 		rval = self.children[1]
 
 		#if isinstance(rval, LiteralNode):
-		ident.typename = rval.getCalculatedType()
+		ident.typename = rval.getCalculatedType(codeCtx)
 		
 		if self.assignType == AssignmentNode.AssignType.LV_INIT:
 			codeCtx.addVar(ident)
@@ -372,6 +381,9 @@ class CodeBlock(ASTNode):
 class GroupedExpression(ASTNode):
 	def __init__(self, lineNum, expression):
 		super().__init__('GroupExpr', lineNum, children=[expression])
+
+	def getCalculatedType(self,codeCtx:CodeContext):
+		return self.children[0].getCalculatedType(codeCtx)
 
 	def getCode(self,codeCtx:CodeContext):
 		return f"{self._getNextLines(codeCtx)}({self.children[0].getCode(codeCtx)})"
@@ -449,8 +461,9 @@ class FunctionDeclaration(ASTNode):
 				curParam.append(' = ')
 				curParam.append(defVal)
 			pbuilder.append(''.join(curParam))
-			
-			codeCtx.addVar(IdentifierNode(self.children[0].lineno,pname.value))
+			ident = IdentifierNode(self.children[0].lineno,pname.value)
+			ident.typename = TypeNameSpec(curType)
+			codeCtx.addVar(ident)
 		
 		functionSignature = self.children[0].typename
 		freturn = functionSignature.getReturnType()
@@ -523,3 +536,31 @@ class ParamsDecl(ASTNode):
 
 	def getCode(self,codeCtx:CodeContext):
 		return f"PARAMS({','.join([x.getCode(codeCtx) for x in self.children])})"
+	
+class MathExpression(ASTNode):
+	def __init__(self, lineNum, left, op, right):
+		super().__init__('MathExpression', lineNum, children=[left,op,right])
+
+	def getCalculatedType(self,codeCtx:CodeContext):
+		left = self.children[0]
+		right = self.children[2]
+		return right.getCalculatedType(codeCtx)
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}{self.children[0].getCode(codeCtx)} {self.children[1].getCode(codeCtx)} {self.children[2].getCode(codeCtx)}"
+
+class UnaryMathExpression(ASTNode):
+	def __init__(self, lineNum, op, right):
+		super().__init__('UnaryMathExpression', lineNum, children=[op,right])
+	
+	def getCalculatedType(self,codeCtx:CodeContext):
+		return self.children[1].getCalculatedType(codeCtx)
+
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}{self.children[0].getCode(codeCtx)} {self.children[1].getCode(codeCtx)}"
+
+class MathOperator(ASTNode):
+	def __init__(self, lineNum, op):
+		super().__init__('MathOperator', lineNum, value=op)
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}{self.value}"

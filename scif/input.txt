@@ -14,19 +14,16 @@ namespace(test,gvar_)
 
 decl(float(int;float)) testfunc = {
 	params ["_a",["_b",5]];
-	if (false) exitwith {_b = 1; _a};
-	if (true) then {
-		if (false) exitwith {_b = 4;_b};
-		if (true) then {
-			if (true) then {
-				if (false) exitWith {_b = 123};
-			}
-		}
-	};
-	_a = 5;
-	private _e = 4;
-	_e = _b;
-	_e
+	private _extended = 3 + 4 - (-2 * 5 / 10 + _b);
+	// if (false) exitwith {_b = 1; _a};
+	// if (true) then {
+	// 	if (false) exitwith {_b = 4;_b};
+	// 	//_b = (3 + _a) * 5.4;
+	// };
+	// _a = 5;
+	// private _e = 4;
+	// _e = _b;
+	// _e
 };
 
 // if 

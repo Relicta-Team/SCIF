@@ -18,6 +18,11 @@ globNamespaceDecl = {}
 
 isCompileContext = True
 
+precedence = (
+	('left', 'PLUS', 'MINUS'),
+	('left', 'MUL', 'DIV'),
+)
+
 def p_prog(p):
 	'''prog : statements
 	'''
@@ -112,6 +117,7 @@ def p_expression(p):
 	'''expression : literal
 				  | IDENT
 				  | OPEN_PAREN expression CLOSE_PAREN
+				  | mathExpression
 				  | controlStructuresRValue
 				  | arrayConstant
 	'''
@@ -140,6 +146,26 @@ def p_arrayValueList(p):
 		p[0] = [p[1]]
 	else:
 		p[0] = [p[1]] + p[3]
+
+def p_mathExpression(p):
+	'''mathExpression : expression mathOperator expression
+					  | PLUS expression
+					  | MINUS expression
+	'''
+	if len(p) == 4:
+		p[0] = MathExpression(p.slice[1].lineno, p[1], p[2], p[3])
+	else:
+		p[0] = UnaryMathExpression(p.slice[1].lineno, MathOperator(p.slice[1].lineno, p[1]), p[2])
+
+def p_mathOperator(p):
+	'''mathOperator : PLUS
+					| MINUS
+					| MUL
+					| DIV
+					| MOD
+					| POWER
+	'''
+	p[0] = MathOperator(p.slice[1].lineno, p[1])
 
 def p_controlStructuresLValue(p):
 	'''controlStructuresLValue : whileStructure
@@ -260,7 +286,7 @@ def p_empty(p):
 parser = None
 try:
 	import sys
-	#import logging
+	import logging
 	#logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 	parser = yacc.yacc(debug=True, 
 					#debuglog=logging.getLogger(),
@@ -272,7 +298,11 @@ except Exception as e:
 
 
 def generateAST(input):
-	return parser.parse(input)
+	#delete file if it exists
+	if os.path.exists('parser.log'):
+		os.remove('parser.log')
+	logging.basicConfig(filename='parser.log', level=logging.DEBUG,format='%(message)s')
+	return parser.parse(input,debug=logging.getLogger(),tracking=True)
 
 if __name__ == '__main__':
 	import os

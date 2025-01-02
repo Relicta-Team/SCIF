@@ -40,6 +40,10 @@ conditions_symbols = (
 	'LT','GT','LTE','GTE','EQUALV','EQUALVT','NOTEQUALV','NOTEQUALVT','OR','AND'
 )
 
+math_symbols = (
+	'PLUS','MINUS','MUL','DIV','MOD','POWER'
+)
+
 t_LT = r'<'
 t_GT = r'>'
 t_LTE = r'<='
@@ -48,6 +52,13 @@ t_EQUALV = r'=='
 t_NOTEQUALV = r'!='
 t_AND=r'&&'
 t_OR=r'\|\|'
+
+t_PLUS = r'\+'
+t_MINUS = r'-'
+t_MUL = r'\*'
+t_DIV = r'/'
+t_MOD = r'%'
+t_POWER = r'\^'
 
 tokens = (
 	#preprocessor
@@ -76,7 +87,7 @@ tokens = (
 	'OPEN_BRACE',
 	'CLOSE_BRACE',
 	
-	) + tuple(reserved.values()) + conditions_symbols + langSpec
+	) + tuple(reserved.values()) + conditions_symbols + math_symbols + langSpec
 
 
 literals = '();={}:!,[]'
