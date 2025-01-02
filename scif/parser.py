@@ -20,6 +20,7 @@ isCompileContext = True
 
 precedence = (
 	('left', 'PLUS', 'MINUS'),
+	('left', 'MOD', 'POWER'),
 	('left', 'MUL', 'DIV'),
 )
 
@@ -148,24 +149,17 @@ def p_arrayValueList(p):
 		p[0] = [p[1]] + p[3]
 
 def p_mathExpression(p):
-	'''mathExpression : expression mathOperator expression
-					  | PLUS expression
+	'''mathExpression : PLUS expression
 					  | MINUS expression
+					  | expression PLUS expression
+                   	  | expression MINUS expression
+                   	  | expression MUL expression
+                   	  | expression DIV expression
 	'''
 	if len(p) == 4:
-		p[0] = MathExpression(p.slice[1].lineno, p[1], p[2], p[3])
+		p[0] = MathExpression(p.slice[1].lineno, p[1], MathOperator(p.slice[2].lineno, p[2]), p[3])
 	else:
 		p[0] = UnaryMathExpression(p.slice[1].lineno, MathOperator(p.slice[1].lineno, p[1]), p[2])
-
-def p_mathOperator(p):
-	'''mathOperator : PLUS
-					| MINUS
-					| MUL
-					| DIV
-					| MOD
-					| POWER
-	'''
-	p[0] = MathOperator(p.slice[1].lineno, p[1])
 
 def p_controlStructuresLValue(p):
 	'''controlStructuresLValue : whileStructure

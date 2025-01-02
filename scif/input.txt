@@ -14,7 +14,8 @@ namespace(test,gvar_)
 
 decl(float(int;float)) testfunc = {
 	params ["_a",["_b",5]];
-	private _extended = 3 + 4 - (-2 * 5 / 10 + _b);
+	_b = 3 - 4;
+	//private _extended = 3 + 4 - (-2 * 5 / 10 + _b);
 	// if (false) exitwith {_b = 1; _a};
 	// if (true) then {
 	// 	if (false) exitwith {_b = 4;_b};
