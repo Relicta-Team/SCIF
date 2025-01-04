@@ -52,7 +52,7 @@ Variable storage support:
 
 OOP:
 - object - location-based type
-- struct - hashmap based object
+- struct_t - hashmap based object
 
 Other:
 - thread_handle - internal thread handle
