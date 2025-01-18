@@ -163,9 +163,75 @@ def getRegion(content,startPattern,endPattern):
 	if endIdx == -1: return None
 	return pst[:endIdx]
 
-def getNativeSignature(cmdName):
+def getNativeSignature(cmdName,cmdType='u'):
 	cmtxt = downloadCMDSignature(cmdName)
-	raise NotImplementedError()
+	cmdInfo = {
+		"signatures": []
+	}
+	lineBuff = cmtxt.split('\n')
+
+	def _sanitizeText(text):
+		#replace [[(w+)]]
+		text = re.sub(r'\[\[(\w+)\]\]',r'\1',text)
+
+		#replace {{GVI|\w+|\d+\.\d+[}]*}}
+		text = re.sub(r'\{\{GVI\|(\w+)\|(\d+\.\d+)[^}]*\}\}',r'\1 v\2',text)
+
+		return text
+	
+	def _nativeTypeToTS(nativeType):
+		return nativeType
+	
+	def _isCommand(line):
+		return re.match(r'^\|\w+=\s*(.*)$',line)
+	
+	for lineNum, line in enumerate(lineBuff):
+		
+		grp = re.match(r'^\|descr=\s*(.*)$',line)
+		if grp:
+			descText = grp.group(1)
+			for i in lineBuff[lineNum+1:]:
+				if _isCommand(i):
+					break
+				descText += '\n' + i
+			cmdInfo['description'] = _sanitizeText(descText)
+			continue
+		grp = re.match(r'^\|s\d+=\s*(.*)$',line)
+		if grp:
+			# signature catched
+			# header required if need validate command type
+			#cmdParamNames = re.findall(_sanitizeText(grp.group(1)))
+				
+			signature = {}
+			argsList = [] #{name,type}
+			stext = ""
+			for i in lineBuff[lineNum+1:]:
+				if (i == ''): continue
+				#paramNum, name, nativeType, descr
+				grpPar = re.match(r'\|p(\d+)=\s*(\w+)\:\s*(\[\[(\w+)\]\]|(\[\[\w+\]\] format \[\[[^\]]+\]\]))\s*\-\s*(.*)$',i)
+				if grpPar:
+					assert grpPar.group(1) == str(len(argsList)+1)
+					argsList.append({
+						"name": grpPar.group(2),
+						"nativeType": grpPar.group(3),
+						"type": _nativeTypeToTS(grpPar.group(3)),
+						"descr": _sanitizeText(grpPar.group(4) or grpPar.group(6))
+					})
+				else:
+					pSince = re.match(r'\|p\d+since=\s*(.*)$',i)
+					if pSince:
+						stext += i
+						continue
+					if _isCommand(i):
+						break
+					else:
+						argsList[-1]['descr'] += '\n' + i
+			cmdInfo['signatures'].append(
+				argsList
+			)
+
+
+	return cmdInfo
 
 def __dumpNativeDict(dta):
 	lines = []
@@ -184,14 +250,18 @@ def __dumpNativeDict(dta):
 
 				lines.extend(clsList)
 			elif memData['type'] == 'static':
+				sig = getNativeSignature(memData['nativeName'],memData['cmdType'])
+				#todo add signature
 				statList.append(f'\tstatic {memName}(); //{memData["nativeName"]}')
 			elif memData['type'] == 'const':
 				constList.append(f'\tconst {memName}; //{memData["nativeName"]}')
 			else:
 				raise Exception(f'invalid type: {memData["type"]}')
 		
-		statList.sort()
-		constList.sort()
+		statList = sorted(statList,key=lambda x: re.search('static (\w+)',x).group(1))
+		constList = sorted(constList,key=lambda x: re.search('const (\w+)',x).group(1))
+		#statList.sort()
+		#constList.sort()
 
 		lines.extend(statList)
 		lines.extend(constList)
@@ -202,7 +272,7 @@ def __dumpNativeDict(dta):
 		f.write('\n'.join(lines))
 
 if __name__ == '__main__':
-	#downloadCMDSignature("lineintersectsSurfaces")
+	#getNativeSignature("lineintersectsSurfaces")
 	dta = prepareNativeCommands()
 	__dumpNativeDict(dta)
 
