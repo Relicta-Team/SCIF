@@ -66,6 +66,19 @@ Specific:
 - vector2 - 2d vector
 - NULL - special null type -> var numOrNull:null|number = 5; numOrNull = null;
 
+# Переопределение членов классов и структур
+Нам необязательно указывать полные аннотации при переопределении членов классов и структур если их сигнатуры соответствуют родилельским.
+Для того, чтобы пробросит определение аннотации из родилея используйте decl(override):
+```sqf
+struct(A)
+	decl(string) def(name) "test 1";
+endstruct
+
+struct(B) base(A)
+	decl(override) def(name) "overriden value";
+endstruct
+```
+
 # Разбор модулей
 Каждый указанный файл будет разобран если к нему подключен спецификатор языка <lang.hpp>
 
