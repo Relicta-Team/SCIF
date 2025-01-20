@@ -1,10 +1,31 @@
 
 namespace(test,gvar_)
 
+enum(VideoSettings,VIDEO_SETTINGS_)
+//val1
+#define VIDEO_SETTINGS_MAX 1
+//val 2
+#define VIDEO_SETTINGS_MIN 0
+enumend
 
+enum(Test,T_)
+#define T_VAL1 4
+/* string value (prev is tval) */
+#define T_VAL2 "extended"
+#define T_VAL4 456
+enumend
 
+// macro_const(chat_hideCheckUpdate)
+// #define CHAT_HIDE_CHECK_UPDATE 0.1
 
+// macro_func(cd_localCmdGetArgs,any())
+// #define arguments cd_internal_cmd_thisArguments
 
+// macro_func(ct_addProp,void(string,string))
+// #define var(name,val) _buffer = [name,val];
+
+// inline_macro
+// #define setting(a,b,c) [a,#b,c]
 
 /*
 	This is a multiline comment

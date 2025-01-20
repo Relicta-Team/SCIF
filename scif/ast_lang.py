@@ -138,11 +138,11 @@ class ASTNode:
 				if cline == i:
 					codeCtx.commList.pop(0)
 					if cval.startswith("/*"):
-						stack.append(cval)
+						stack.append(codeCtx.tabCount * '\t' + cval)
 						i += cval.count("\n")
 						continue
 					if cval.startswith("//"):
-						stack.append(cval)
+						stack.append(codeCtx.tabCount * '\t' + cval)
 						stack.append("\n")
 						i += 1
 						continue
@@ -213,7 +213,10 @@ class LiteralNode(ValueNode):
 		return f"({self.typename}){super().get_string_value_repr()}"
 	
 	def getCode(self,codeCtx:CodeContext=None):
-		return self._getNextLines(codeCtx) + self.value
+		val = self.value
+		if self.typename.stringRepr == 'string':
+			val = f'"{val}"'
+		return self._getNextLines(codeCtx) + val
 
 class TypeNameSpec:
 	def __init__(self, typename):
@@ -564,3 +567,24 @@ class MathOperator(ASTNode):
 		super().__init__('MathOperator', lineNum, value=op)
 	def getCode(self,codeCtx:CodeContext):
 		return f"{self._getNextLines(codeCtx)}{self.value}"
+	
+class EnumDeclareBlock(ASTNode):
+	def __init__(self, lineNum, name, values, closeLineNum=-1):
+		super().__init__('EnumDeclare', lineNum, children=[name,values])
+		self.lineno_closer = closeLineNum
+	def getCode(self,codeCtx:CodeContext):
+		op = "{"
+		enumNL = self._getNextLines(codeCtx)
+		preCode = f'enum {self.children[0]} {op}'
+		with codeCtx:
+			for x in self.children[1]:
+				preCode += x.getCode(codeCtx) + ","
+			diffLines = (self.lineno_closer - self.lineno) - preCode.count('\n')
+			codeCtx.curLine += diffLines
+		return f"{enumNL}{preCode} " + ("}" if diffLines <= 0 else ('\n'*diffLines)+(codeCtx.tabCount * '\t')+"}")
+	
+class EnumKVPair(ASTNode):
+	def __init__(self, lineNum, name, value):
+		super().__init__('EnumKVPair', lineNum, children=[name,value])
+	def getCode(self,codeCtx:CodeContext):
+		return f"{self._getNextLines(codeCtx)}{self.children[0]} = {self.children[1].getCode(codeCtx)}"

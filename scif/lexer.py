@@ -31,6 +31,8 @@ langSpec = (
 	"NAMESPACESPEC",
 	"DECLSPEC",
 	"ENUMSPEC",
+	"ENUMSPECEND",
+	"ENUMKEY",
 	"INLINEMACROSPEC",
 	"CONSTSPEC",
 	"MACROCONSTSPEC",
@@ -95,6 +97,7 @@ literals = '();={}:!,[]'
 states = (
 	('string', 'inclusive'),
 	('declspec', 'inclusive'),
+	#('enumblock', 'inclusive'),
 )
 
 t_ignore = ' \t\r'
@@ -113,6 +116,17 @@ def t_PP_COMMENTBLOCK(t):
 	t.lexer.commentsDict[t.lineno] = t.value
 	t.lexer.lineno += ncr
 	#return t
+
+def t_ENUMKEY(t):
+	r'\#define\s*(\w+)'
+	if hasattr(t.lexer,'enumblock_prefix'):
+		pName = re.match(r'\#define\s*(\w+)',t.value).group(1)
+		newPName = pName.replace(t.lexer.enumblock_prefix,"")
+		t.value = newPName
+		t.type = 'ENUMKEY'
+		return t
+	else:
+		pass
 
 def t_PP_DIRECTIVE(t):
 	r'\#(include|define|undef)'
@@ -147,6 +161,15 @@ def t_declspec_end(t):
 
 def t_ENUMSPEC(t):
 	r'enum\([a-zA-Z_][a-zA-Z0-9_]*\s*\,\s*[a-zA-Z_][a-zA-Z0-9_]*\)'
+	
+	grp = re.match(r'enum\((\w+)\s*\,\s*(\w+)',t.value)
+	assert grp
+	t.lexer.enumblock_prefix = grp.group(2)
+	t.value = grp.group(1)
+	return t
+
+def t_ENUMSPECEND(t):
+	r'enumend'
 	return t
 
 def t_INLINEMACROSPEC(t):

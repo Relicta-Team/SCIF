@@ -22,6 +22,7 @@ precedence = (
 	('left', 'PLUS', 'MINUS'),
 	('left', 'MOD', 'POWER'),
 	('left', 'MUL', 'DIV'),
+	('right', 'ENUMKEY'),
 )
 
 def p_prog(p):
@@ -101,13 +102,17 @@ def p_statements(p):
 	'''statements : statement
 				  | statement SEMICOLON statements
 				  | controlStructuresLValue SEMICOLON statements
+				  | preprocessorDeclare statements
 				  | empty namespaceDeclare statements
 				  | empty
 	'''
 	# ! empty namespaceDeclare statements need fix
 
 	if len(p) > 2:
-		p[0] = [p[1]] + p[3]
+		if len(p) == 4:
+			p[0] = [p[1]] + p[3]
+		else:
+			p[0] = [p[1]] + p[2]
 	elif p[1] is not None:
 		p[0] = [p[1]]
 	else:
@@ -220,6 +225,26 @@ def p_moduleMemberDeclare(p):
 	'''
 	p[0] = p[1]
 
+def p_preprocessorDeclare(p):
+	'''preprocessorDeclare : enumDeclare
+	'''
+	p[0] = p[1]
+
+def p_enumDeclare(p):
+	'''enumDeclare : ENUMSPEC enumKVPairList ENUMSPECEND'''
+	p[0] = EnumDeclareBlock(p.slice[1].lineno, p[1], p[2], p.slice[-1].lineno)
+
+def p_enumKVPairList(p):
+	'''enumKVPairList : ENUMKEY expression
+					  | ENUMKEY expression enumKVPairList
+	'''
+	if len(p) == 3:
+		p[0] = [EnumKVPair(p.slice[1].lineno, p[1], p[2])]
+	else:
+		p[0] = [EnumKVPair(p.slice[1].lineno, p[1], p[2])] + p[3]
+
+
+
 def p_moduleVarDeclare(p):
 	'''moduleVarDeclare : DECLSPEC assignment
 	'''
@@ -314,3 +339,4 @@ if __name__ == '__main__':
 		#visit_global(astdata,debugPrint=True)
 	except Exception as e:
 		print(e.with_traceback(e.__traceback__))
+		print(e.with_traceback())
