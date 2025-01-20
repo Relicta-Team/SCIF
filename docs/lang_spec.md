@@ -12,7 +12,7 @@
 | specificator | description | example |
 | --- | --- | --- |
 | decl() | спецификатор типа (функции или переменной). Для юнионов используется косая черта. Для перечисления параметров используется точка с запятой. | decl(int) testvar = 3;<br/>decl(int(float|int;bool)) testfunc = {params["_num","_boolval"]};
-| enum() | спецификатор перечисления макроопределений | enum(ENUM_PREFIX_)<br/>#define ENUM_PREFIX_A 1<br/>#define ENUM_PREFIX_B 2
+| enum() | спецификатор перечисления макроопределений. Для завершения блока используйте `enumend` | enum(ENUM_PREFIX_)<br/>#define ENUM_PREFIX_A 1<br/>#define ENUM_PREFIX_B 2<br/>enumend
 | namespace() | спецификатор пространств имён. Нужен для сопоставления типов переменных | namespace(module)<br/>module_var1 = 3;<br/>module_var2 = ""; 
 | export | спецификатор экспортируемого члена | export decl(int) vara = 3;
 | const | спецификатор константной переменной | const decl(int)
