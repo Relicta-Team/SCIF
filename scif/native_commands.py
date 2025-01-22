@@ -128,31 +128,61 @@ def prepareNativeCommands():
 
 	return dictNatives
 
+dict_assoc_fpath = {">>":"cfg_gg_n","-":"oper_minus","+":"oper_plus"}
 
 def downloadCMDSignature(cmdName):
 	# address: https://community.bistudio.com/wiki/cmd
 	# template info: https://community.bistudio.com/wiki/Template:RV
 	# load page by cmd name
-	url = f'https://community.bistudio.com/wikidata/api.php?action=query&format=json&list=search&srsearch={cmdName}'
+
+	pathCommandCached = f'.\\cmd_cache\\{dict_assoc_fpath.get(cmdName,cmdName)}.txt'
+	if os.path.exists(pathCommandCached):
+		with open(pathCommandCached,'r',encoding='utf-8') as f:
+			return f.read()
+
+	urlCmdSearch = cmdName
+	if urlCmdSearch.startswith('diag_'):
+		urlCmdSearch = urlCmdSearch[5:]
+	url = f'https://community.bistudio.com/wikidata/api.php?action=query&format=json&list=search&srsearch={urlCmdSearch}'
 	headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36'}
 
-	r = requests.get(url, headers=headers)
-	if r.status_code != 200: raise Exception(f'invalid cmd name: {cmdName}')
-	data = r.json()
-	if data['query']['searchinfo']['totalhits'] == 0: raise Exception(f'invalid cmd name: {cmdName}')
-	realCMDName = data['query']['search'][0]['title']
+	if cmdName not in ['-','>>']: #! some commands cannot be found
+		r = requests.get(url, headers=headers)
+		if r.status_code != 200: raise Exception(f'invalid cmd name: {cmdName}')
+		data = r.json()
+		if data['query']['searchinfo']['totalhits'] == 0: raise Exception(f'invalid cmd name: {cmdName}')
+		realCMDName = '' #data['query']['search'][0]['title']
+
+		for pageTitle in data['query']['search']:
+			if pageTitle['title'].lower() == cmdName.lower() and not pageTitle['snippet'].startswith("#REDIRECT"):
+				realCMDName = pageTitle['title']
+				break
+			if pageTitle['title'].lower().replace('_'," ") == cmdName.lower().replace('_'," ") and not pageTitle['snippet'].startswith("#REDIRECT"):
+				realCMDName = pageTitle['title'].replace(' ',"_")
+				break
+
+		assert realCMDName
+	else:
+		if cmdName == '>>':
+			realCMDName = 'config_greater_greater_name'
+		else:
+			realCMDName = cmdName
 
 	#url = f'https://community.bistudio.com/wiki/{cmdName}'
 	baseurl = 'https://community.bistudio.com/wikidata/api.php?'
 	queryTemplate = f'{baseurl}action=query&titles={realCMDName}&prop=revisions&rvprop=content&format=json'
 
 	r = requests.get(queryTemplate, headers=headers)
-	if r.status_code != 200: raise Exception(f'invalid cmd name: {cmdName}')
+	if r.status_code != 200: raise Exception(f'invalid cmd name: {realCMDName}')
 	data = r.json()
 	
 	native = list(data['query']['pages'].values())[0]['revisions'][0]["*"]
 	native = native.replace('\\n','\n')
-
+	
+	#save cache
+	with open(pathCommandCached,'w',encoding='utf-8') as f:
+		f.write(native)
+	
 	return native
 
 def getRegion(content,startPattern,endPattern):
@@ -163,16 +193,75 @@ def getRegion(content,startPattern,endPattern):
 	if endIdx == -1: return None
 	return pst[:endIdx]
 
+def checkNular(content,cmdName):
+	content = re.sub(r'\'\'\'(\w+)\'\'\'',r'\1',content) # replace '''musicVolume'''
+	if (content.lower() == cmdName.lower()): return True
+	return re.match(r'^\s*\[\['+cmdName+r'\]\]',content,re.IGNORECASE)
+
+def checkUnary(content,cmdName):
+	return re.match(r'\[\['+cmdName+r'\]\]',content,re.IGNORECASE)
+
+def checkBinary(content,cmdName):
+	if cmdName == ">>": return True
+	return re.match(r'\s*\w+\s*\[\['+cmdName+r'\]\]\s*(\[|\w+)',content,re.IGNORECASE)
+
+mapFuncCheck = {
+	"u": checkUnary,
+	"n": checkNular,
+	"b": checkBinary
+}
+
 def getNativeSignature(cmdName,cmdType='u'):
+	'''
+	dict: {signature [], description: '', return: {}}
+	signature: [
+		{
+			name:str - name param
+			nativeType:str - native type name
+			type:str - typescript type
+			description:str - param description
+		}
+		...
+	],
+	return: {
+		nativeType:str - native type name
+		type:str - typescript type
+		description:str - return value description
+	}
+	'''
+	if cmdName.lower() in [ \
+		'tojson', \
+		'remoteexec', \
+		'remoteexeccall', \
+		'servercommand', \
+		'intersect', \
+		'setpipeffect', \
+		'drawicon3d', \
+		'showhud' \
+	]: return None
+
 	cmtxt = downloadCMDSignature(cmdName)
 	cmdInfo = {
-		"signatures": []
+		"signature": []
 	}
 	lineBuff = cmtxt.split('\n')
 
 	def _sanitizeText(text):
+		
+		#replace <br>
+		text = re.sub(r'\<br\>',r'\n',text)
+		
 		#replace [[(w+)]]
 		text = re.sub(r'\[\[(\w+)\]\]',r'\1',text)
+
+		#img remove
+		text = re.sub(r'\[\[File\:[^\]]*\]\] ','',text)
+
+		# position format removing
+		text = re.sub(r'\[\[[^|]+\|(\w+)\]\]',r'\1',text)
+
+		#links replace eg: [[Title Effect Type]]
+		text = re.sub(r'\[\[([^\]]*)\]\]',r'\1',text)
 
 		#replace {{GVI|\w+|\d+\.\d+[}]*}}
 		text = re.sub(r'\{\{GVI\|(\w+)\|(\d+\.\d+)[^}]*\}\}',r'\1 v\2',text)
@@ -180,6 +269,7 @@ def getNativeSignature(cmdName,cmdType='u'):
 		return text
 	
 	def _nativeTypeToTS(nativeType):
+		nativeType = nativeType.replace(" to ","|")
 		return nativeType
 	
 	def _isCommand(line):
@@ -201,41 +291,89 @@ def getNativeSignature(cmdName,cmdType='u'):
 			# signature catched
 			# header required if need validate command type
 			#cmdParamNames = re.findall(_sanitizeText(grp.group(1)))
-				
-			signature = {}
+			if not mapFuncCheck[cmdType](grp.group(1),cmdName): continue
+
+			
 			argsList = [] #{name,type}
 			stext = ""
 			for i in lineBuff[lineNum+1:]:
 				if (i == ''): continue
-				#paramNum, name, nativeType, descr
-				grpPar = re.match(r'\|p(\d+)=\s*(\w+)\:\s*(\[\[(\w+)\]\]|(\[\[\w+\]\] format \[\[[^\]]+\]\]))\s*\-\s*(.*)$',i)
+
+				i = _sanitizeText(i)
+
+				#paramNum, name, nativeType, description
+				grpPar = re.match(r'\|p(\d+)=\s*(\w+)\:\s*([^\-]+)(- .*)?$',i)					
+
 				if grpPar:
-					assert grpPar.group(1) == str(len(argsList)+1)
+					#assert grpPar.group(1) == str(len(argsList)+1)
+					
+					#! skip corrupted wiki pages
+					if cmdName.lower() not in ['nearestobjects']:
+						assert re.match(r".*(\d+)",grpPar.group(1)).group(1) == str(len(argsList)+1), 'invalid param num'
+
 					argsList.append({
 						"name": grpPar.group(2),
 						"nativeType": grpPar.group(3),
 						"type": _nativeTypeToTS(grpPar.group(3)),
-						"descr": _sanitizeText(grpPar.group(4) or grpPar.group(6))
+						"description": _sanitizeText(grpPar.group(4)[2:] if grpPar.group(4) else '')
 					})
+
+					#adding second descriptions line
+					# for i in lineBuff[lineNum+1:]:
+					# 	if i == '': continue
+					# 	if _isCommand(i):
+					# 		break
+					# 	argsList[-1]['description'] += '\n' + _sanitizeText(i)
+					
 				else:
+					sSince = re.match(r'\|s\d+since=\s*(.*)$',i)
+					if sSince:
+						cmdInfo['description'] += '\n' + f"Since ver. {sSince.group(1)}"
+						continue
+
 					pSince = re.match(r'\|p\d+since=\s*(.*)$',i)
 					if pSince:
 						stext += i
 						continue
+					pReturn = re.match(r'\|r(\d+)=\s*(.*)$',i.replace('\n','<br>'))
+					if pReturn:
+						firstMin = pReturn.group(2).find(' - ')
+						if firstMin == -1:
+							tpart = pReturn.group(2)
+							dpart = ''
+						else:
+							tpart = pReturn.group(2)[:firstMin]
+							dpart = pReturn.group(2)[firstMin+3:]
+						cmdInfo['return'] = {
+							"nativeType": tpart,
+							"type": _nativeTypeToTS(tpart),
+							"description": _sanitizeText(dpart)
+						}
+						#adding next returns
+						doBreakFromReturn = False
+						for i in lineBuff[lineNum+1:]:
+							if i == '': continue
+							if _isCommand(i):
+								doBreakFromReturn = True
+								break
+							cmdInfo['return']['description'] += '\n' + _sanitizeText(i)
+						if doBreakFromReturn: break
+						continue
 					if _isCommand(i):
 						break
 					else:
-						argsList[-1]['descr'] += '\n' + i
-			cmdInfo['signatures'].append(
-				argsList
-			)
+						argsList[-1]['description'] += '\n' + i
+			cmdInfo['signature'] = argsList
 
+	#post check
+	if cmdType == 'n' and len(cmdInfo['signature']) != 0: raise Exception(f'command {cmdName} must be nular')
 
 	return cmdInfo
 
 def __dumpNativeDict(dta):
 	lines = []
-	for module,contentMdl in dta.items():
+	for (it, (module,contentMdl)) in enumerate(dta.items()):
+		print(f"parsing module {it+1} of {len(dta)}: {module}")
 		lines.append(f'// {module}\n\n')
 		
 		statList = []
@@ -251,8 +389,18 @@ def __dumpNativeDict(dta):
 				lines.extend(clsList)
 			elif memData['type'] == 'static':
 				sig = getNativeSignature(memData['nativeName'],memData['cmdType'])
-				#todo add signature
-				statList.append(f'\tstatic {memName}(); //{memData["nativeName"]}')
+				if sig is None:
+					commentPrefix = ""
+				else:
+					commentPrefix = "\t/**\n"
+					commentPrefix += f"\t * {sig['description']}"
+					for param in sig['signature']:
+						commentPrefix += f"\n\t * @param {param['name']} {param['description']}"
+
+					commentPrefix += f"\n\t * @returns {sig['return']['description']}"
+					commentPrefix += "\n*/"
+
+				statList.append(commentPrefix + f'\tstatic {memName}(); //{memData["nativeName"]}')
 			elif memData['type'] == 'const':
 				constList.append(f'\tconst {memName}; //{memData["nativeName"]}')
 			else:
@@ -268,11 +416,11 @@ def __dumpNativeDict(dta):
 		
 		pass
 	
-	with open('native_commands_dump.h','w') as f:
+	with open('native_commands_dump.h','w',encoding='utf-8') as f:
 		f.write('\n'.join(lines))
 
 if __name__ == '__main__':
-	#getNativeSignature("lineintersectsSurfaces")
+	#sig = getNativeSignature("-")
 	dta = prepareNativeCommands()
 	__dumpNativeDict(dta)
 
