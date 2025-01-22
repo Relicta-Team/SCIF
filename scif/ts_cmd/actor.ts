@@ -1,0 +1,89 @@
+// actor
+
+
+export namespace actor {
+
+	export class actor {
+		actionNow //actionnow;
+		addBackpack //addbackpack;
+		addGoggles //addgoggles;
+		addHeadgear //addheadgear;
+		addVest //addvest;
+		addWeapon //addweapon;
+		addWeaponGlobal //addweaponglobal;
+		allowSprint //allowsprint;
+		disableAI //disableai;
+		enableFatigue //enablefatigue;
+		enableMimics //enablemimics;
+		enableStamina //enablestamina;
+		forceAddUniform //forceadduniform;
+		getAimPosition //unitaimposition;
+		getAnimAimPrecision //getanimaimprecision;
+		getAnimSpeedCoef //getanimspeedcoef;
+		getAnimationNames //animationnames;
+		getAnimationState //animationstate;
+		getAttachedObjects //attachedobjects;
+		getAttachedTo //attachedto;
+		getBackpack //backpack;
+		getBoneNames //getbonenames;
+		getCameraViewDirection //getcameraviewdirection;
+		getCurrentWeapon //currentweapon;
+		getCustomAimCoef //getcustomaimcoef;
+		getDirection //direction;
+		getEyeDirection //eyedirection;
+		getEyePos //eyepos;
+		getFace //face;
+		getGoggles //goggles;
+		getHandgunItems //handgunitems;
+		getHandgunWeapon //handgunweapon;
+		getHeadgear //headgear;
+		getObjectFov //getobjectfov;
+		getOwner //owner;
+		getPlayerId //getplayerid;
+		getPlayerUID //getplayeruid;
+		getPrimaryWeapon //primaryweapon;
+		getSecondaryWeapon //secondaryweapon;
+		getSelectionBones //getselectionbones;
+		getSelectionNames //selectionnames;
+		getSpeed //speed;
+		getStance //stance;
+		getUniform //uniform;
+		getUnitFreeFallInfo //getunitfreefallinfo;
+		getUnitMovesInfo //getunitmovesinfo;
+		getUnitState //getunitstate;
+		getVest //vest;
+		hasCustomFace //hascustomface;
+		hasWeapon //hasweapon;
+		isAwake //isawake;
+		isForcedWalk //isforcedwalk;
+		isPlayer //isplayer;
+		isTouchingGround //istouchingground;
+		playAction //playaction;
+		playActionNow //playactionnow;
+		playGesture //playgesture;
+		playMove //playmove;
+		playMoveNow //playmovenow;
+		removeAction //removeaction;
+		removeGoggles //removegoggles;
+		removeUniform //removeuniform;
+		removeVest //removevest;
+		removeWeapon //removeweapon;
+		selectWeapon //selectweapon;
+		setAwake //awake;
+		setCustomAimCoef //setcustomaimcoef;
+		setFace //setface;
+		setFaceAnimation //setfaceanimation;
+		setForceWalk //forcewalk;
+		setHitPointDamage //sethitpointdamage;
+		setMimic //setmimic;
+		setOwner //setowner;
+		setRandomLip //setrandomlip;
+		setUnitCombatMode //setunitcombatmode;
+		setUnitPos //setunitpos;
+		switchAction //switchaction;
+		switchCamera //switchcamera;
+		switchGesture //switchgesture;
+		switchMove //switchmove;
+	}
+	function getPlayer():Object { return null as any }; //player
+}

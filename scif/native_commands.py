@@ -211,6 +211,18 @@ mapFuncCheck = {
 	"b": checkBinary
 }
 
+mapTypeReplacer = {
+	"boolean": "Boolean",
+	"scalar": "number",
+	"number": "number",
+	"string": "string",
+	"array": "array",
+	"Nothing": "void",
+	"Anything": "any",
+	"display": "display",
+	"control": "widget",
+}
+
 def getNativeSignature(cmdName,cmdType='u'):
 	'''
 	dict: {signature [], description: '', return: {}}
@@ -269,7 +281,23 @@ def getNativeSignature(cmdName,cmdType='u'):
 		return text
 	
 	def _nativeTypeToTS(nativeType):
+		
+		# array format positionT
+		nativeType = re.sub('Array format \w+','Array',nativeType)
+
+		# replace array of ...
+		nativeType = re.sub('Array( of .*)','Array',nativeType)
+
+		#replace v arma eg: arma3v2.10
+		nativeType = re.sub('arma3 v\d+\.\d+','',nativeType)
+
 		nativeType = nativeType.replace(" to ","|")
+		nativeType = nativeType.replace(" or ","|")
+		nativeType = nativeType.replace(",","|")
+		nativeType = nativeType.replace(" ","")
+		for k,v in mapTypeReplacer.items():
+			nativeType = re.sub(k,v,nativeType,flags=re.IGNORECASE)
+
 		return nativeType
 	
 	def _isCommand(line):
@@ -370,11 +398,38 @@ def getNativeSignature(cmdName,cmdType='u'):
 
 	return cmdInfo
 
+mapNonAllowedParamNames = {
+	"class": "className"
+}
+
+def getFuncPrepContext(sig:dict, cmdType='n'):
+	'''returns param list and return type annotation'''
+	slist = []
+	for par in sig['signature']:
+		slist.append(f'{mapNonAllowedParamNames.get(par["name"],par["name"])}:{par["type"]}')
+	
+	return (f'({", ".join(slist)})',sig['return']['type'])
+
+def getFuncComment(sig:dict, cmdType='n'):
+	commentPrefix = "\t/**\n"
+	desc = sig['description'].replace('\n','\n\t')
+	commentPrefix += f"\t * {desc}"
+	for param in sig['signature']:
+		parDesc = param['description'].replace('\n','\n\t')
+		parName = mapNonAllowedParamNames.get(param["name"],param["name"])
+		commentPrefix += f"\n\t * @param {parName} {parDesc}"
+	retDesc = sig['return']['description'].replace('\n','\n\t')
+	if retDesc != "":
+		commentPrefix += f"\n\t * @returns {retDesc}"
+	commentPrefix += "\n\t*/\n"
+	return commentPrefix
+
 def __dumpNativeDict(dta):
 	lines = []
 	for (it, (module,contentMdl)) in enumerate(dta.items()):
 		print(f"parsing module {it+1} of {len(dta)}: {module}")
 		lines.append(f'// {module}\n\n')
+		lines.append(f'export namespace {module} '+"{"+'\n')
 		
 		statList = []
 		constList = []
@@ -384,40 +439,55 @@ def __dumpNativeDict(dta):
 				for cmemName,cmemData in memData['members'].items():
 					clsList.append(f'\t\t{cmemName} //{cmemData["nativeName"]};')
 				clsList.sort()
-				clsList.insert(0,f'\tclass {memName}')
+				clsList.insert(0,f'\texport class {memName} '+"{")
 
 				lines.extend(clsList)
+				lines.append("\t}")
 			elif memData['type'] == 'static':
 				sig = getNativeSignature(memData['nativeName'],memData['cmdType'])
 				if sig is None:
 					commentPrefix = ""
+					paramMap = "(UNKNOWN)"
+					returnTp = "any"
+					if memData['cmdType'] == 'b':
+						paramMap = "(lval:any, rval:any)"
+					elif memData['cmdType'] == 'n':
+						paramMap = '(lval:any)'
 				else:
-					commentPrefix = "\t/**\n"
-					commentPrefix += f"\t * {sig['description']}"
-					for param in sig['signature']:
-						commentPrefix += f"\n\t * @param {param['name']} {param['description']}"
+					commentPrefix = getFuncComment(sig,memData['cmdType'])
 
-					commentPrefix += f"\n\t * @returns {sig['return']['description']}"
-					commentPrefix += "\n*/"
+					paramMap, returnTp = getFuncPrepContext(sig,memData['cmdType'])
 
-				statList.append(commentPrefix + f'\tstatic {memName}(); //{memData["nativeName"]}')
+				emptyImpl = "{}"
+				if returnTp != "void": emptyImpl = "{ return null as any }"
+				statList.append(commentPrefix + f'\tfunction {memName}{paramMap}:{returnTp} {emptyImpl}; //{memData["nativeName"]}')
 			elif memData['type'] == 'const':
 				constList.append(f'\tconst {memName}; //{memData["nativeName"]}')
 			else:
 				raise Exception(f'invalid type: {memData["type"]}')
 		
-		statList = sorted(statList,key=lambda x: re.search('static (\w+)',x).group(1))
+		statList = sorted(statList,key=lambda x: re.search('function (\w+)',x).group(1))
 		constList = sorted(constList,key=lambda x: re.search('const (\w+)',x).group(1))
+
+		#remove statics
+		#statList = [re.sub(r'static (\w+)',r'\1',x) for x in statList]
+
 		#statList.sort()
 		#constList.sort()
 
 		lines.extend(statList)
 		lines.extend(constList)
+
+		lines.append("}") #namespace closer
 		
+		with open(f'.\\ts_cmd\\{module}.ts','w',encoding='utf-8') as f:
+			f.write('\n'.join(lines))
+		lines = []
+
 		pass
 	
-	with open('native_commands_dump.h','w',encoding='utf-8') as f:
-		f.write('\n'.join(lines))
+	# with open('native_commands_dump.ts','w',encoding='utf-8') as f:
+	# 	f.write('\n'.join(lines))
 
 if __name__ == '__main__':
 	#sig = getNativeSignature("-")
