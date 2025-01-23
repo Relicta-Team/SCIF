@@ -3,7 +3,7 @@ import ply.yacc as yacc
 import re
 from visitor import visit_global
 from native_commands import nativeAssocRefs,prepareNativeCommands
-
+from preprocess import preprocessFile
 
 # https://community.bistudio.com/wiki/Operators
 
@@ -317,6 +317,10 @@ except Exception as e:
 
 
 def generateAST(input):
+
+	#preprocess file
+	input = preprocessFile(input)
+
 	#delete file if it exists
 	if os.path.exists('parser.log'):
 		os.remove('parser.log')

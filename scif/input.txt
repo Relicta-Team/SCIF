@@ -3,8 +3,9 @@ namespace(test,gvar_)
 
 
 
-// macro_const(chat_hideCheckUpdate)
-// #define CHAT_HIDE_CHECK_UPDATE 0.1
+macro_const(chat_hideCheckUpdate)
+#define CHAT_HIDE_CHECK_UPDATE false
+
 
 // macro_func(cd_localCmdGetArgs,any())
 // #define arguments cd_internal_cmd_thisArguments
