@@ -15,6 +15,7 @@ def preprocessFile(content):
 	isPrepprocHandleNextline = False
 
 	def _determineDataType(data):
+		# todo determine arrays vec4,vec3
 		if re.match(r"\s*[\'\"]",data): return "string"
 		if re.match(r"\s*-?\d+",data): 
 			return "float" if "." in data else "int"
