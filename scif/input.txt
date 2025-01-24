@@ -3,12 +3,8 @@ namespace(test,gvar_)
 
 
 
-macro_const(chat_hideCheckUpdate)
-#define CHAT_HIDE_CHECK_UPDATE [2.5,-2,3,4]
-
-
-// macro_func(cd_localCmdGetArgs,any())
-// #define arguments cd_internal_cmd_thisArguments
+macro_func(cd_localCmdGetArgs,any())
+#define arguments cd_internal_cmd_thisArguments
 
 // macro_func(ct_addProp,void(string,string))
 // #define var(name,val) _buffer = [name,val];
@@ -22,6 +18,9 @@ enum(VideoSettings,VIDEO_SETTINGS_)
 //val 2
 #define VIDEO_SETTINGS_MIN 0
 enumend
+
+macro_const(chat_hideCheckUpdate)
+#define CHAT_HIDE_CHECK_UPDATE [2.5,-2,3,4]
 
 /*
 	This is a multiline comment

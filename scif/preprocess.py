@@ -2,7 +2,7 @@ import os
 import re
 
 PAT_MACROCONST = re.compile(r'macro_const\((\w+)\)',re.MULTILINE)
-
+PAT_MACROFUNC = re.compile(r'macro_func\((\w+)\,((\(*[^\(\)]*\)*)*)\)',re.MULTILINE)
 PAT_DEFINE = re.compile(r'\#\s*define\s*(\w+)(\s*\(([^\)]*)\))?')
 
 def preprocessFile(content):
@@ -12,6 +12,9 @@ def preprocessFile(content):
 	nextMacroConstFunc = ""
 	lastMacroDefName = ""
 	def nextIsMacroConst(): return nextMacroConstFunc != ""
+	nextMacroFunc = {"name":"","signature":""}
+	def nextIsMacroFunc(): return nextMacroFunc["name"] != ""
+	
 	isPrepprocHandleNextline = False
 
 	def _determineDataType(data):
@@ -50,6 +53,16 @@ def preprocessFile(content):
 			nextMacroConstFunc = mcst_grp.group(1)
 			content = content.replace(mcst_grp.group(0),"")
 			continue
+
+		mcf_grp = re.search(PAT_MACROFUNC,line)
+		if mcf_grp:
+			assert mcf_grp.group(0).count("(") == mcf_grp.group(0).count(")"), f'Missmatch macrofunc open/close count {mcf_grp.group(0)}'
+			assert "\n" not in mcf_grp.group(0), f'Newline in macrofunc {mcf_grp.group(0)}'
+
+			nextMacroFunc['name'] = mcf_grp.group(1)
+			nextMacroFunc['signature'] = mcf_grp.group(2)
+			content = content.replace(mcf_grp.group(0),"")
+			continue
 		
 		mdf_grp = re.search(PAT_DEFINE,line)
 		if mdf_grp:
@@ -58,7 +71,7 @@ def preprocessFile(content):
 			if any((x for x in _skipEnumsPrefixList if mdf_grp.group(1).startswith(x))):
 				continue
 
-			if nextIsMacroConst():
+			if nextIsMacroConst() or nextIsMacroFunc():
 				ppFunc = mdf_grp.group(1)
 				isFunc = False
 				paramList = []
@@ -74,15 +87,23 @@ def preprocessFile(content):
 				lastMacroDefName = ppFunc
 
 				prepDict[ppFunc] = {
-					'realName': nextMacroConstFunc,
+					'realName': "-null=realName-",
 					'isFunc': isFunc,
 					'params': paramList,
 					'content': macroContent,
 					'removable': line,
 					"type": "any",
 				}
+				if nextIsMacroConst():
+					prepDict[ppFunc]['pptype'] = "const"
+					prepDict[ppFunc]['realName'] = nextMacroConstFunc
+					nextMacroConstFunc = ""
+				if nextIsMacroFunc():
+					prepDict[ppFunc]['pptype'] = "func"
+					prepDict[ppFunc]['realName'] = nextMacroFunc['name']
+					prepDict[ppFunc]['type'] = nextMacroFunc['signature']
+					nextMacroFunc = {"name":"","signature":""}
 				
-				nextMacroConstFunc = ""
 				continue
 			else:
 				print("warning: unknown define type: " + line)
@@ -98,13 +119,21 @@ def preprocessFile(content):
 			raise NotImplementedError('macro function not implemented')
 			content = content.replace(macroInfo['removable'],macroInfo['content'] + ";")
 		else:
-			# replace header
-			dtype = _determineDataType(macroInfo['content'])
-			if dtype == "any":
-				raise Exception(f"invalid macro type: {macroInfo['content']}")
-			content = content.replace(macroInfo['removable'],f"const decl({dtype}) {macroInfo['realName']} = {macroInfo['content']};")
+			if macroInfo['pptype'] == "const":
+				# replace header
+				dtype = _determineDataType(macroInfo['content'])
+				if dtype == "any":
+					raise Exception(f"invalid macro type: {macroInfo['content']}")
+				content = content.replace(macroInfo['removable'],f"const decl({dtype}) {macroInfo['realName']} = {macroInfo['content']};")
 
-			content = re.sub(r'\b'+macroName+r'\b',macroInfo['realName'],content)
+				content = re.sub(r'\b'+macroName+r'\b',macroInfo['realName'],content)
+			elif macroInfo['pptype'] == "func":
+				codeContent = "{" + macroInfo['content'] + "}"
+				content = content.replace(macroInfo['removable'],f"decl({macroInfo['type']}) {macroInfo['realName']} = {codeContent};")
+
+				content = re.sub(r'\b'+macroName+r'\b',f"(call {macroInfo['realName']})",content)
+			else:
+				raise Exception(f"invalid macro type: {macroInfo.get('type','unknwon')}")
 
 	print(content)
 	return content
