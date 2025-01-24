@@ -5,6 +5,8 @@ namespace(test,gvar_)
 macro_func(ct_addProp,void(string,string))
 #define var(name,val) _buffer = [name,val];
 
+var(1,5)
+
 // inline_macro
 // #define setting(a,b,c) [a,#b,c]
 

@@ -37,6 +37,11 @@ def preprocessFile(content):
 		except:
 			return "any"
 
+	def _prepParam(pval):
+		if not pval.startswith("_"): 
+			return "_" + pval
+		return pval
+
 	_skipEnumsPrefixList = []
 	for line in content.splitlines():
 		if line == '': continue
@@ -90,6 +95,7 @@ def preprocessFile(content):
 					'realName': "-null=realName-",
 					'isFunc': isFunc,
 					'params': paramList,
+					'realParams': [_prepParam(x) for x in paramList],
 					'content': macroContent,
 					'removable': line,
 					"type": "any",
@@ -115,26 +121,37 @@ def preprocessFile(content):
 			prepDict[lastMacroDefName]['content'] += '\n' + line
 
 
-	for macroName,macroInfo in prepDict.items():
-		if macroInfo['isFunc']:
-			raise NotImplementedError('macro function not implemented')
-			content = content.replace(macroInfo['removable'],macroInfo['content'] + ";")
-		else:
-			if macroInfo['pptype'] == "const":
-				# replace header
-				dtype = _determineDataType(macroInfo['content'])
-				if dtype == "any":
-					raise Exception(f"invalid macro type: {macroInfo['content']}")
-				content = content.replace(macroInfo['removable'],f"const decl({dtype}) {macroInfo['realName']} = {macroInfo['content']};")
+	for macroName,macroInfo in prepDict.items():		
+	
+		if macroInfo['pptype'] == "const":
+			if macroInfo['isFunc']:
+				raise NotImplementedError('macro function not implemented')
+				content = content.replace(macroInfo['removable'],macroInfo['content'] + ";")
+			# replace header
+			dtype = _determineDataType(macroInfo['content'])
+			if dtype == "any":
+				raise Exception(f"invalid macro type: {macroInfo['content']}")
+			content = content.replace(macroInfo['removable'],f"const decl({dtype}) {macroInfo['realName']} = {macroInfo['content']};")
 
-				content = re.sub(r'\b'+macroName+r'\b',macroInfo['realName'],content)
-			elif macroInfo['pptype'] == "func":
+			content = re.sub(r'\b'+macroName+r'\b',macroInfo['realName'],content)
+		elif macroInfo['pptype'] == "func":
+			if macroInfo['isFunc']:
+				params = macroInfo['realParams']
+				baseContent = macroInfo['content']
+				for i,pname in enumerate(macroInfo['params']):
+					baseContent = re.sub(r'\b'+pname+r'\b',params[i],baseContent)
+				codeContent = "{"+f"params[{','.join([f'\"{x}\"' for x in params])}]" + baseContent + "}"
+				content = content.replace(macroInfo['removable'],f"decl({macroInfo['type']}) {macroInfo['realName']} = {codeContent};")
+				
+				#todo re.sub(r'\b'+macroName+r'\(([^,])\,([^\)])\)',r'\[\1,\2\] call proc', "var(1443,2)")				
+				pass
+			else:
 				codeContent = "{" + macroInfo['content'] + "}"
 				content = content.replace(macroInfo['removable'],f"decl({macroInfo['type']}) {macroInfo['realName']} = {codeContent};")
 
 				content = re.sub(r'\b'+macroName+r'\b',f"(call {macroInfo['realName']})",content)
-			else:
-				raise Exception(f"invalid macro type: {macroInfo.get('type','unknwon')}")
+		else:
+			raise Exception(f"invalid macro type: {macroInfo.get('type','unknwon')}")
 
 	print(content)
 	return content
