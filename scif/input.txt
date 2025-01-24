@@ -2,15 +2,14 @@
 namespace(test,gvar_)
 
 
-
-macro_func(cd_localCmdGetArgs,any())
-#define arguments cd_internal_cmd_thisArguments
-
-// macro_func(ct_addProp,void(string,string))
-// #define var(name,val) _buffer = [name,val];
+macro_func(ct_addProp,void(string,string))
+#define var(name,val) _buffer = [name,val];
 
 // inline_macro
 // #define setting(a,b,c) [a,#b,c]
+
+macro_func(cd_localCmdGetArgs,any())
+#define arguments cd_internal_cmd_thisArguments
 
 enum(VideoSettings,VIDEO_SETTINGS_)
 //val1

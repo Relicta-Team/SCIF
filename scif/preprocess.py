@@ -98,6 +98,7 @@ def preprocessFile(content):
 					prepDict[ppFunc]['pptype'] = "const"
 					prepDict[ppFunc]['realName'] = nextMacroConstFunc
 					nextMacroConstFunc = ""
+					assert len(paramList) == 0, "macro_const cannot be a function with arguments"
 				if nextIsMacroFunc():
 					prepDict[ppFunc]['pptype'] = "func"
 					prepDict[ppFunc]['realName'] = nextMacroFunc['name']
