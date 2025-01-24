@@ -4,7 +4,7 @@ namespace(test,gvar_)
 
 
 macro_const(chat_hideCheckUpdate)
-#define CHAT_HIDE_CHECK_UPDATE false
+#define CHAT_HIDE_CHECK_UPDATE [2.5,-2,3,4]
 
 
 // macro_func(cd_localCmdGetArgs,any())
