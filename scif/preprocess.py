@@ -8,7 +8,7 @@ PAT_DEFINE = re.compile(r'\#\s*define\s*(\w+)(\s*\(([^\)]*)\))?')
 PAT_INCLUDE = re.compile(r'\#\s*include\s*(?:\"([\.\\\/\d\w]+)\"|<([\.\\\/\d\w]+)>)')
 
 def normalizePath(path):
-	return os.path.normpath(path)
+	return os.path.realpath(os.path.normpath(path))
 
 def loadAndPreprocess(path,pset):
 	path = normalizePath(path)
@@ -72,13 +72,16 @@ def preprocessFile(content,fullpath,pathes=set(),prepDictOut=dict()) -> tuple[st
 
 		minc_grp = re.search(PAT_INCLUDE,line)
 		if minc_grp:
-			path = minc_grp.group(1)
-			path = normalizePath(path)
+			pathBase = minc_grp.group(1)
+			path = normalizePath(pathBase)
+			# join() automatically resolve path (e.g. double dots)
+			path = os.path.join(os.path.dirname(fullpath),path)
 			_, preprocOut = loadAndPreprocess(path,pathes)
 			if not preprocOut:
 				print(f'Failed to load \"{path}\" \n\tfrom {fullpath}')
-			else:
-				pass
+				
+				#! exceptions are not allowed, only warn messages
+				#raise Exception(f'Failed to load \"{path}\" from {fullpath}')
 			continue
 
 		mcst_grp = re.search(PAT_MACROCONST,line)
