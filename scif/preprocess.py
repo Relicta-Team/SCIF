@@ -5,9 +5,24 @@ PAT_INLINEMACRO = re.compile(r'\binline_macro\b',re.MULTILINE)
 PAT_MACROCONST = re.compile(r'\bmacro_const\((\w+)\)',re.MULTILINE)
 PAT_MACROFUNC = re.compile(r'\bmacro_func\((\w+)\,((\(*[^\(\)]*\)*)*)\)',re.MULTILINE)
 PAT_DEFINE = re.compile(r'\#\s*define\s*(\w+)(\s*\(([^\)]*)\))?')
+PAT_INCLUDE = re.compile(r'\#\s*include\s*(?:\"([\.\\\/\d\w]+)\"|<([\.\\\/\d\w]+)>)')
 
-def preprocessFile(content):
-	prepDict = {} #key preprocName, value {realName:str, isFunc:bool, params:[], content:str}
+def normalizePath(path):
+	return os.path.normpath(path)
+
+def loadAndPreprocess(path,pset):
+	path = normalizePath(path)
+	if not os.path.exists(path): return (None,None)
+	with open(path,encoding='utf-8') as f:
+		return preprocessFile(f.read(),path,pset)
+
+def preprocessFile(content,fullpath,pathes=set(),prepDictOut=dict()) -> tuple[str,dict]|tuple[None,None]:
+	fullpath = os.path.abspath(fullpath)
+	if fullpath in pathes:
+		return (None, None)
+	pathes.add(fullpath)
+	
+	prepDict = prepDictOut #key preprocName, value {realName:str, isFunc:bool, params:[], content:str}
 
 	#collect preproc info
 	nextMacroConstFunc = ""
@@ -53,6 +68,17 @@ def preprocessFile(content):
 		if enumGrp:
 			if enumGrp.group(1) not in _skipEnumsPrefixList:
 				_skipEnumsPrefixList.append(enumGrp.group(1))
+			continue
+
+		minc_grp = re.search(PAT_INCLUDE,line)
+		if minc_grp:
+			path = minc_grp.group(1)
+			path = normalizePath(path)
+			_, preprocOut = loadAndPreprocess(path,pathes)
+			if not preprocOut:
+				print(f'Failed to load \"{path}\" \n\tfrom {fullpath}')
+			else:
+				pass
 			continue
 
 		mcst_grp = re.search(PAT_MACROCONST,line)
@@ -108,6 +134,7 @@ def preprocessFile(content):
 					'content': macroContent,
 					'removable': line,
 					"type": "any",
+					'defined': fullpath,
 					# !"addSemicolon": False, do not add; example: vec2(1,vec2(2,3)) -> [1,[2,3];<<<];
 				}
 				if nextIsMacroConst():
@@ -238,10 +265,12 @@ def preprocessFile(content):
 		else:
 			raise Exception(f"invalid macro type: {macroInfo.get('type','unknwon')}")
 
-	print(content)
-	return content
+	
+	return (content, prepDict)
 
 if __name__ == '__main__':
 	with open(os.path.dirname(__file__) + '\\input.txt') as f:
 		input = f.read()
-	print(preprocessFile(input))
+	content, dictInfo = preprocessFile(input,normalizePath(f.name))
+	print(content)
+	pass

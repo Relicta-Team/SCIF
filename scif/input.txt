@@ -1,4 +1,6 @@
 
+#include "inp.h"
+
 namespace(test,gvar_)
 
 
@@ -9,6 +11,8 @@ setting(1,2 + e,3);
 inline_macro
 #define test_val 2345
 testvar_inline_macro = test_val;
+
+outer_macro_call(1,5);
 
 macro_func(ct_addProp,void(string,string))
 #define var(_name,val) _buffer = [_name,val];
