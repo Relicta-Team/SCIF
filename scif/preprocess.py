@@ -99,6 +99,7 @@ def preprocessFile(content):
 					'content': macroContent,
 					'removable': line,
 					"type": "any",
+					# !"addSemicolon": False, do not add; example: vec2(1,vec2(2,3)) -> [1,[2,3];<<<];
 				}
 				if nextIsMacroConst():
 					prepDict[ppFunc]['pptype'] = "const"
@@ -143,7 +144,40 @@ def preprocessFile(content):
 				codeContent = "{"+f"params[{','.join([f'\"{x}\"' for x in params])}]" + baseContent + "}"
 				content = content.replace(macroInfo['removable'],f"decl({macroInfo['type']}) {macroInfo['realName']} = {codeContent};")
 				
-				#todo re.sub(r'\b'+macroName+r'\(([^,])\,([^\)])\)',r'\[\1,\2\] call proc', "var(1443,2)")				
+				# replace calling macro to function calling
+				# replFrom = []
+				# replTo = []
+				# lastIndex = len(macroInfo['params']) - 1
+				# for i,pname in enumerate(macroInfo['params']):
+				# 	replFrom.append(r'([^\)]+)' if i == lastIndex else r'([^,]+)')
+				# 	replTo.append(f'\\{i+1}')
+				# content = re.sub(r'\b'+macroName+r'\(' +(','.join(replFrom))+ r'\)','[' + ', '.join(replTo) + '] call ' + (macroInfo['realName']), content)
+				while True:
+					macGrp = re.search(r'\b'+macroName+r'\(',content)
+					if not macGrp: break
+					start,end = macGrp.span()
+					paramList = []
+					scopes = 1
+					for let in list(content[end:]):
+						if let == "(":
+							scopes += 1
+							paramList[-1] += let
+						elif let == ")":
+							scopes -= 1
+							if scopes == 0:
+								break
+							paramList[-1] += let
+						elif let == ',' and scopes == 1:
+							paramList.append('')
+							pass
+						else:
+							if not paramList: paramList.append('')
+							paramList[-1] += let
+					# handle macro with paramcount
+					assert len(paramList) == len(params)
+					#replace macro content
+					content = content.replace(f"{macGrp.group(0)}{','.join(paramList)})",f"[{','.join(paramList)}] call {macroInfo['realName']}")
+					pass
 				pass
 			else:
 				codeContent = "{" + macroInfo['content'] + "}"

@@ -2,13 +2,12 @@
 namespace(test,gvar_)
 
 
-macro_func(ct_addProp,void(string,string))
-#define var(name,val) _buffer = [name,val];
-
-var(1,5)
-
 // inline_macro
 // #define setting(a,b,c) [a,#b,c]
+
+macro_func(ct_addProp,void(string,string))
+#define var(_name,val) _buffer = [_name,val];
+var(1 +3 * (1000),5 - (2/5-4)-4);
 
 macro_func(cd_localCmdGetArgs,any())
 #define arguments cd_internal_cmd_thisArguments
