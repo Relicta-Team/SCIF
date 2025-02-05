@@ -19,7 +19,7 @@ macro_func(acli_createChunkData,any[]())
 #define __ACLI_NEW_DATA [__ACLI_NEW_BUFFER_OBJECTS,__ACLI_NEW_BUFFER_METAINFO,_chid]
 inline_macro
 #define ACLI_NEW_CHUNK __ACLI_NEW_DATA
-
+//TODO fix empty define on line 21, 19...
 varallocator = ACLI_NEW_CHUNK;
 
 inline_macro

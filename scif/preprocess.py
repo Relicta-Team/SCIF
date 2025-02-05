@@ -170,103 +170,112 @@ def preprocessFile(content,fullpath,pathes=set(),prepDictOut=dict()) -> tuple[st
 
 	content = re.sub(PAT_INLINEMACRO,'',content)
 
-	for macroName,macroInfo in prepDict.items():		
-	
-		if macroInfo['pptype'] == "const":
-			if macroInfo['isFunc']:
-				raise NotImplementedError('macro function not implemented')
-				content = content.replace(macroInfo['removable'],macroInfo['content'] + ";")
-			# replace header
-			dtype = _determineDataType(macroInfo['content'])
-			if dtype == "any":
-				raise Exception(f"invalid macro type: {macroInfo['content']}")
-			content = content.replace(macroInfo['removable'],f"const decl({dtype}) {macroInfo['realName']} = {macroInfo['content']};")
+	# get regex pattern
+	pat_allMacroNames = re.compile(r'\b(' + '|'.join(prepDict.keys()) + r')\b')
+	iterateMacros = True
+	while iterateMacros:
+		iterateMacros = False
+		for macroName,macroInfo in prepDict.items():
+			if macroInfo['pptype'] == "const":
+				if macroInfo['isFunc']:
+					raise NotImplementedError('macro function not implemented')
+					content = content.replace(macroInfo['removable'],macroInfo['content'] + ";")
+				# replace header
+				dtype = _determineDataType(macroInfo['content'])
+				if dtype == "any":
+					raise Exception(f"invalid macro type: {macroInfo['content']}")
+				content = content.replace(macroInfo['removable'],f"const decl({dtype}) {macroInfo['realName']} = {macroInfo['content']};")
 
-			content = re.sub(r'\b'+macroName+r'\b',macroInfo['realName'],content)
-		elif macroInfo['pptype'] == "inline":
-			content = content.replace(macroInfo['removable'],"")
-			if macroInfo['isFunc']:
-				while True:
-					macGrp = re.search(r'\b'+macroName+r'\(',content)
-					if not macGrp: break
-					start,end = macGrp.span()
-					paramList = []
-					scopes = 1
-					for let in list(content[end:]):
-						if let == "(":
-							scopes += 1
-							paramList[-1] += let
-						elif let == ")":
-							scopes -= 1
-							if scopes == 0:
-								break
-							paramList[-1] += let
-						elif let == ',' and scopes == 1:
-							paramList.append('')
-							pass
-						else:
-							if not paramList: paramList.append('')
-							paramList[-1] += let
-					# handle macro with paramcount
-					assert len(paramList) == len( macroInfo['params'])
+				content = re.sub(r'\b'+macroName+r'\b',macroInfo['realName'],content)
+			elif macroInfo['pptype'] == "inline":
+				content = content.replace(macroInfo['removable'],"")
+				if macroInfo['isFunc']:
+					while True:
+						macGrp = re.search(r'\b'+macroName+r'\(',content)
+						if not macGrp: break
+						start,end = macGrp.span()
+						paramList = []
+						scopes = 1
+						for let in list(content[end:]):
+							if let == "(":
+								scopes += 1
+								paramList[-1] += let
+							elif let == ")":
+								scopes -= 1
+								if scopes == 0:
+									break
+								paramList[-1] += let
+							elif let == ',' and scopes == 1:
+								paramList.append('')
+								pass
+							else:
+								if not paramList: paramList.append('')
+								paramList[-1] += let
+						# handle macro with paramcount
+						assert len(paramList) == len( macroInfo['params'])
 
-					baseStruct = macroInfo['content']
-					for i,parDat in enumerate(paramList):
-						parName = macroInfo['params'][i]
-						parToString = parName in macroInfo['toStringParams']
-						if parToString:
-							baseStruct = re.sub(r'\#'+parName+r'\b',"\""+parDat+"\"",baseStruct)
-						else:
-							baseStruct = re.sub(r'\b'+parName+r'\b',parDat,baseStruct)
-					#replace macro content
-					content = content.replace(f"{macGrp.group(0)}{','.join(paramList)})",baseStruct)
-			else:
-				content = re.sub(r'\b' + macroName + r'\b',macroInfo['content'],content)
-		elif macroInfo['pptype'] == "func":
-			if macroInfo['isFunc']:
-				params = macroInfo['realParams']
-				baseContent = macroInfo['content']
-				for i,pname in enumerate(macroInfo['params']):
-					baseContent = re.sub(r'\b'+pname+r'\b',params[i],baseContent)
-				codeContent = "{"+f"params[{','.join([f'\"{x}\"' for x in params])}]" + baseContent + "}"
-				content = content.replace(macroInfo['removable'],f"decl({macroInfo['type']}) {macroInfo['realName']} = {codeContent};")
-				
-				# replace calling macro to function calling
-				while True:
-					macGrp = re.search(r'\b'+macroName+r'\(',content)
-					if not macGrp: break
-					start,end = macGrp.span()
-					paramList = []
-					scopes = 1
-					for let in list(content[end:]):
-						if let == "(":
-							scopes += 1
-							paramList[-1] += let
-						elif let == ")":
-							scopes -= 1
-							if scopes == 0:
-								break
-							paramList[-1] += let
-						elif let == ',' and scopes == 1:
-							paramList.append('')
-							pass
-						else:
-							if not paramList: paramList.append('')
-							paramList[-1] += let
-					# handle macro with paramcount
-					assert len(paramList) == len(params)
-					#replace macro content
-					content = content.replace(f"{macGrp.group(0)}{','.join(paramList)})",f"[{','.join(paramList)}] call {macroInfo['realName']}")
+						baseStruct = macroInfo['content']
+						for i,parDat in enumerate(paramList):
+							parName = macroInfo['params'][i]
+							parToString = parName in macroInfo['toStringParams']
+							if parToString:
+								baseStruct = re.sub(r'\#'+parName+r'\b',"\""+parDat+"\"",baseStruct)
+							else:
+								baseStruct = re.sub(r'\b'+parName+r'\b',parDat,baseStruct)
+						#replace macro content
+						content = content.replace(f"{macGrp.group(0)}{','.join(paramList)})",baseStruct)
+				else:
+					content = re.sub(r'\b' + macroName + r'\b',macroInfo['content'],content)
+				# post check if inside macro
+				#if re.search(pat_allMacroNames,content):
+				#	iterateMacros = True
+			elif macroInfo['pptype'] == "func":
+				if macroInfo['isFunc']:
+					params = macroInfo['realParams']
+					baseContent = macroInfo['content']
+					for i,pname in enumerate(macroInfo['params']):
+						baseContent = re.sub(r'\b'+pname+r'\b',params[i],baseContent)
+					codeContent = "{"+f"params[{','.join([f'\"{x}\"' for x in params])}]" + baseContent + "}"
+					content = content.replace(macroInfo['removable'],f"decl({macroInfo['type']}) {macroInfo['realName']} = {codeContent};")
+					
+					# replace calling macro to function calling
+					while True:
+						macGrp = re.search(r'\b'+macroName+r'\(',content)
+						if not macGrp: break
+						start,end = macGrp.span()
+						paramList = []
+						scopes = 1
+						for let in list(content[end:]):
+							if let == "(":
+								scopes += 1
+								paramList[-1] += let
+							elif let == ")":
+								scopes -= 1
+								if scopes == 0:
+									break
+								paramList[-1] += let
+							elif let == ',' and scopes == 1:
+								paramList.append('')
+								pass
+							else:
+								if not paramList: paramList.append('')
+								paramList[-1] += let
+						# handle macro with paramcount
+						assert len(paramList) == len(params)
+						#replace macro content
+						content = content.replace(f"{macGrp.group(0)}{','.join(paramList)})",f"[{','.join(paramList)}] call {macroInfo['realName']}")
+						pass
 					pass
-				pass
-				
-			else:
-				codeContent = "{" + macroInfo['content'] + "}"
-				content = content.replace(macroInfo['removable'],f"decl({macroInfo['type']}) {macroInfo['realName']} = {codeContent};")
+				else:
+					codeContent = "{" + macroInfo['content'] + "}"
+					content = content.replace(macroInfo['removable'],f"decl({macroInfo['type']}) {macroInfo['realName']} = {codeContent};")
 
-				content = re.sub(r'\b'+macroName+r'\b',f"(call {macroInfo['realName']})",content)
-		else:
-			raise Exception(f"invalid macro type: {macroInfo.get('type','unknwon')}")
+					content = re.sub(r'\b'+macroName+r'\b',f"(call {macroInfo['realName']})",content)
+				# post check if inside macro
+				#if re.search(pat_allMacroNames,content):
+				#	iterateMacros = True
+			else:
+				raise Exception(f"invalid macro type: {macroInfo.get('type','unknwon')}")
 
 	
 	return (content, prepDict)
